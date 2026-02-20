@@ -1,3 +1,5 @@
 opencode
 result
 .direnv
+result*
+*.sw?

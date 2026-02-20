@@ -112,7 +112,13 @@ myConfig = opencode-nix.lib.mkOpenCodeConfig [
 ## Options Reference
 
 All `opencode.json` fields are available as typed Nix options with descriptions,
-examples, and type checking. See the option files for full documentation:
+examples, and type checking. The module provides **complete schema coverage**, including:
+
+- **Provider registry metadata** — `npm`, `name`, and per-model `models` registry (capabilities, token limits, modalities)
+- **Hierarchical permission maps** — `external_directory` path-glob rules and `skill` sub-permissions
+- **Agent compatibility fields** — `primary` flag with automatic `mode` normalization
+
+See the option files for full documentation:
 
 | Section | File |
 |---------|------|

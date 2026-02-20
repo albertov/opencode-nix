@@ -3,7 +3,10 @@
 let
   inherit (lib) mkOption types;
 
-  permissionType = types.attrsOf (types.enum [ "allow" "ask" "deny" ]);
+  # Matches upstream PermissionRule = PermissionAction | PermissionObject.
+  permissionAction = types.enum [ "allow" "ask" "deny" ];
+  permissionRule = types.either permissionAction (types.attrsOf permissionAction);
+  permissionType = types.attrsOf permissionRule;
 
   agentSubmodule = types.submodule {
     options = {
@@ -63,6 +66,20 @@ let
         description = ''
           Agent availability mode. 'primary' — available as a top-level agent;
           'subagent' — only callable by other agents; 'all' — available in both contexts.
+          Takes precedence over the legacy 'primary' boolean field when both are set.
+        '';
+      };
+      primary = mkOption {
+        type = types.nullOr types.bool;
+        default = null;
+        description = ''
+          Legacy compatibility flag. When true, marks this agent as a primary (top-level) agent.
+          Normalization precedence:
+            1. If 'mode' is explicitly set, 'mode' is authoritative; 'primary' is preserved for
+               schema compatibility but does not override 'mode'.
+            2. If 'mode' is unset and 'primary = true', the agent behaves as a primary agent.
+          Prefer 'mode = "primary"' for new configurations; use this field only when
+          round-tripping configs that contain the upstream 'primary' boolean field.
         '';
       };
       hidden = mkOption {
@@ -84,7 +101,10 @@ let
       permission = mkOption {
         type = types.nullOr permissionType;
         default = null;
-        description = "Per-agent permission overrides. Maps tool names to 'allow', 'ask', or 'deny'.";
+        description = ''
+          Per-agent permission overrides. Maps tool names to 'allow', 'ask', or 'deny',
+          or to a nested map for path/sub-tool scoped rules.
+        '';
         example = { bash = "ask"; edit = "allow"; };
       };
       options = mkOption {

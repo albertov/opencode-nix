@@ -3,7 +3,9 @@
 let
   moduleSystem = import ./default.nix;
 
-  # Recursively strip null values from an attrset
+  # Recursively strip null values and resulting empty objects from a config value.
+  # Nested attrsets (e.g. permission.external_directory = { "/tmp/**" = "allow"; })
+  # are preserved as-is — only null values and empty {} results are elided.
   cleanConfig = value:
     if builtins.isAttrs value then
       let
@@ -17,12 +19,35 @@ let
     else
       value;
 
+  # Apply mode/primary precedence rules to a single agent attrset.
+  # Precedence:
+  #   1. mode is set     → mode is authoritative; primary is preserved for schema compat.
+  #   2. mode unset, primary = true → emit mode = "primary" for runtime semantics.
+  #   3. both null       → cleanConfig will strip them; no action needed.
+  normalizeAgent = agent:
+    if agent ? mode && agent.mode != null then
+      # mode is authoritative — preserve both fields
+      agent
+    else if agent ? primary && agent.primary == true then
+      # primary=true with no mode → inject mode="primary" for runtime clarity
+      agent // { mode = "primary"; }
+    else
+      agent;
+
+  # Apply agent normalization across all agents in the config (if any).
+  normalizeConfig = config:
+    if config ? agent && config.agent != null then
+      config // { agent = lib.mapAttrs (_: normalizeAgent) config.agent; }
+    else
+      config;
+
   mkOpenCodeConfig = modules:
     let
       evaluated = lib.evalModules {
         modules = [ moduleSystem ] ++ modules;
       };
-      cleaned = cleanConfig evaluated.config.opencode;
+      normalized = normalizeConfig evaluated.config.opencode;
+      cleaned = cleanConfig normalized;
       configJSON = builtins.toJSON cleaned;
     in
     pkgs.writeText "opencode.json" configJSON;

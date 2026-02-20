@@ -88,5 +88,10 @@
             mkOpenCodeConfig = lib.mkOpenCodeConfig;
           };
         });
+
+      # Reusable example modules that can be imported into your own config.
+      examples = {
+        chief-coding-assistant = import ./examples/chief-coding-assistant;
+      };
     };
 }
