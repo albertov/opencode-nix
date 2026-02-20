@@ -17,8 +17,6 @@ let
     else
       value;
 
-in
-{
   mkOpenCodeConfig = modules:
     let
       evaluated = lib.evalModules {
@@ -28,4 +26,24 @@ in
       configJSON = builtins.toJSON cleaned;
     in
     pkgs.writeText "opencode.json" configJSON;
+
+  wrapOpenCode = { name ? "opencode", modules, opencode }:
+    let
+      configDrv = mkOpenCodeConfig modules;
+    in
+    pkgs.symlinkJoin {
+      inherit name;
+      paths = [ opencode ];
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/opencode \
+          --set OPENCODE_CONFIG "${configDrv}"
+      '' + lib.optionalString (name != "opencode") ''
+        mv $out/bin/opencode $out/bin/${name}
+      '';
+    };
+
+in
+{
+  inherit mkOpenCodeConfig wrapOpenCode;
 }

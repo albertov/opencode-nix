@@ -24,8 +24,11 @@
           in
           (mkLib pkgs).mkOpenCodeConfig modules;
 
-        wrapOpenCode = _args:
-          builtins.throw "wrapOpenCode: not yet implemented";
+        wrapOpenCode = { name ? "opencode", modules, opencode }:
+          let
+            pkgs = nixpkgs.legacyPackages.x86_64-linux;
+          in
+          (mkLib pkgs).wrapOpenCode { inherit name modules opencode; };
       };
 
       checks = forAllSystems (system:
@@ -45,6 +48,35 @@
               exit 1
             fi
             touch $out
+          '';
+
+          wrap-opencode-type = pkgs.runCommand "wrap-opencode-type-test" {} ''
+            config=${lib.mkOpenCodeConfig [ { opencode.theme = "dark"; } ]}
+            content=$(cat "$config")
+            echo "Config: $content"
+            if echo "$content" | grep -q '"theme"'; then
+              echo "PASS: theme option present in output"
+              touch $out
+            else
+              echo "FAIL: theme option missing from output"
+              exit 1
+            fi
+          '';
+
+          field-output-check = pkgs.runCommand "field-output-test" {} ''
+            config=${lib.mkOpenCodeConfig [
+              { opencode.theme = "catppuccin"; opencode.logLevel = "debug"; }
+            ]}
+            content=$(cat "$config")
+            echo "Config: $content"
+            if echo "$content" | grep -q '"theme"' && echo "$content" | grep -q '"logLevel"'; then
+              echo "PASS"
+              touch $out
+            else
+              echo "FAIL: expected both theme and logLevel in output"
+              cat "$config"
+              exit 1
+            fi
           '';
         });
     };
