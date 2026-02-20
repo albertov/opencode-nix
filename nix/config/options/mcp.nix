@@ -8,41 +8,53 @@ let
       type = mkOption {
         type = types.nullOr (types.enum [ "local" "remote" ]);
         default = null;
-        description = "MCP server type: local (command) or remote (URL)";
+        description = ''
+          MCP server type. 'local' runs a command as a child process communicating via stdio;
+          'remote' connects to an HTTP endpoint via SSE/streamable-HTTP transport.
+        '';
       };
       # Local MCP fields
       command = mkOption {
         type = types.nullOr (types.listOf types.str);
         default = null;
-        description = "Command to launch local MCP server (type = 'local')";
-        example = [ "npx" "my-mcp-tool" ];
+        description = "Command and arguments to launch a local MCP server process (only for type = 'local').";
+        example = [ "npx" "-y" "@modelcontextprotocol/server-filesystem" "/tmp" ];
       };
       environment = mkOption {
         type = types.nullOr (types.attrsOf types.str);
         default = null;
-        description = "Environment variables for the MCP process";
+        description = ''
+          Environment variables passed to the local MCP server process.
+          Values support '{env:VAR}' syntax for runtime substitution.
+        '';
+        example = { GITHUB_TOKEN = "{env:GITHUB_TOKEN}"; };
       };
       # Remote MCP fields
       url = mkOption {
         type = types.nullOr types.str;
         default = null;
-        description = "URL for remote MCP server (type = 'remote')";
+        description = "URL endpoint for a remote MCP server (only for type = 'remote').";
+        example = "https://api.githubcopilot.com/mcp/";
       };
       headers = mkOption {
         type = types.nullOr (types.attrsOf types.str);
         default = null;
-        description = "HTTP headers for remote MCP requests";
+        description = ''
+          HTTP headers sent with every request to a remote MCP server.
+          Values support '{env:VAR}' syntax for runtime secret injection.
+        '';
+        example = { Authorization = "Bearer {env:MCP_TOKEN}"; };
       };
       # Shared fields
       enabled = mkOption {
         type = types.nullOr types.bool;
         default = null;
-        description = "Enable or disable this MCP server";
+        description = "Explicitly enable or disable this MCP server. Defaults to true when the server is defined.";
       };
       timeout = mkOption {
         type = types.nullOr types.ints.positive;
         default = null;
-        description = "MCP request timeout in milliseconds";
+        description = "Per-server request timeout in milliseconds. Overrides the global experimental.mcp_timeout.";
       };
     };
   };
@@ -51,6 +63,9 @@ in
   options.opencode.mcp = mkOption {
     type = types.nullOr (types.attrsOf mcpSubmodule);
     default = null;
-    description = "MCP server configurations keyed by server name";
+    description = ''
+      MCP (Model Context Protocol) server configurations keyed by server name.
+      MCP servers provide tools that agents can call during their execution.
+    '';
   };
 }

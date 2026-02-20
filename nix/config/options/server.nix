@@ -10,31 +10,34 @@ in
         port = mkOption {
           type = types.nullOr types.ints.positive;
           default = null;
-          description = "HTTP server port number";
+          description = "TCP port number for the opencode HTTP server to listen on.";
+          example = 8080;
         };
         hostname = mkOption {
           type = types.nullOr types.str;
           default = null;
-          description = "HTTP server hostname to bind to";
+          description = "Hostname or IP address for the HTTP server to bind to.";
+          example = "127.0.0.1";
         };
         mdns = mkOption {
           type = types.nullOr types.bool;
           default = null;
-          description = "Enable mDNS service discovery";
+          description = "When true, advertises the server via mDNS for local network discovery.";
         };
         mdnsDomain = mkOption {
           type = types.nullOr types.str;
           default = null;
-          description = "mDNS domain name";
+          description = "Domain name used for mDNS service advertisement.";
         };
         cors = mkOption {
           type = types.nullOr (types.listOf types.str);
           default = null;
-          description = "CORS allowed origin domains";
+          description = "List of allowed CORS origins. Each entry is an origin URL permitted to make cross-origin requests.";
+          example = [ "http://localhost:3000" ];
         };
       };
     });
     default = null;
-    description = "HTTP server settings";
+    description = "HTTP server settings for the opencode web interface and API.";
   };
 }

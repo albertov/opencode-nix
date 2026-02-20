@@ -238,6 +238,63 @@ let
     }
   ];
 
+  # ── Test 25: Realistic end-to-end config ─────────────────────────────
+
+  # Simulates a real-world team configuration using module composition:
+  # base settings, agent overrides, provider auth, MCP servers, permissions,
+  # LSP tweaks, and keybinds — all merged from separate modules.
+  realisticConfig = mkOpenCodeConfig [
+    # Base config
+    {
+      opencode.theme = "catppuccin";
+      opencode.model = "anthropic/claude-sonnet-4-5";
+      opencode.share = "manual";
+      opencode.autoupdate = "notify";
+      opencode.instructions = [ "./CLAUDE.md" "./.opencode/*.md" ];
+    }
+    # Agent overrides
+    {
+      opencode.agent.plan = {
+        steps = 80;
+        temperature = 0.7;
+      };
+      opencode.agent.build = {
+        model = "anthropic/claude-haiku-4-5";
+      };
+    }
+    # Provider config
+    {
+      opencode.provider.anthropic.options.apiKey = "{env:ANTHROPIC_API_KEY}";
+    }
+    # MCP servers
+    {
+      opencode.mcp.filesystem = {
+        type = "local";
+        command = [ "npx" "-y" "@modelcontextprotocol/server-filesystem" "/tmp" ];
+      };
+      opencode.mcp.github = {
+        type = "remote";
+        url = "https://api.githubcopilot.com/mcp/";
+        headers.Authorization = "Bearer {env:GITHUB_TOKEN}";
+      };
+    }
+    # Permissions
+    {
+      opencode.permission = { bash = "allow"; edit = "allow"; };
+    }
+    # Disable noisy LSP
+    {
+      opencode.lsp.yaml = { disabled = true; };
+    }
+    # Keybinds
+    {
+      opencode.keybinds = {
+        session_new = "ctrl+n";
+        app_exit = "ctrl+q";
+      };
+    }
+  ];
+
   # ── The test runner ──────────────────────────────────────────────────
 
   validateScript = ./validate.ts;
@@ -259,7 +316,7 @@ pkgs.stdenvNoCC.mkDerivation {
     mergedConfig listConcatConfig lspDisabledConfig formatterDisabledConfig
     providerTimeoutFalseConfig autoupdateStringConfig autoupdateBoolConfig
     envTemplateConfig remoteMcpConfig permissionWildcardConfig
-    emptyObjectConfig;
+    emptyObjectConfig realisticConfig;
 
   buildPhase = ''
     runHook preBuild
@@ -371,8 +428,28 @@ pkgs.stdenvNoCC.mkDerivation {
     assert_not_contains "Test 24" "$emptyObjectConfig" '"myagent"'
     assert_not_contains "Test 24" "$emptyObjectConfig" '"agent"'
 
+    # ── Test 25: Realistic end-to-end config ─────────────────────────
+
+    run_test "Test 25: Realistic e2e config" "$realisticConfig"
+    assert_contains "Test 25" "$realisticConfig" '"theme":"catppuccin"'
+    assert_contains "Test 25" "$realisticConfig" '"model":"anthropic/claude-sonnet-4-5"'
+    assert_contains "Test 25" "$realisticConfig" '"share":"manual"'
+    assert_contains "Test 25" "$realisticConfig" '"autoupdate":"notify"'
+    assert_contains "Test 25" "$realisticConfig" 'CLAUDE'
+    assert_contains "Test 25" "$realisticConfig" '"steps":80'
+    assert_contains "Test 25" "$realisticConfig" '"temperature"'
+    assert_contains "Test 25" "$realisticConfig" '"anthropic/claude-haiku-4-5"'
+    assert_contains "Test 25" "$realisticConfig" '{env:ANTHROPIC_API_KEY}'
+    assert_contains "Test 25" "$realisticConfig" '"filesystem"'
+    assert_contains "Test 25" "$realisticConfig" '"github"'
+    assert_contains "Test 25" "$realisticConfig" 'Bearer {env:GITHUB_TOKEN}'
+    assert_contains "Test 25" "$realisticConfig" '"bash":"allow"'
+    assert_contains "Test 25" "$realisticConfig" '"disabled":true'
+    assert_contains "Test 25" "$realisticConfig" '"session_new":"ctrl+n"'
+    assert_contains "Test 25" "$realisticConfig" '"app_exit":"ctrl+q"'
+
     echo ""
-    echo "All 24 tests passed! ($PASS Zod validations)"
+    echo "All 25 tests passed! ($PASS Zod validations)"
 
     runHook postBuild
   '';

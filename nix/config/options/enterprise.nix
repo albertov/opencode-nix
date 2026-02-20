@@ -10,12 +10,12 @@ in
         url = mkOption {
           type = types.nullOr types.str;
           default = null;
-          description = "Enterprise API base URL";
-          example = "https://corp.example.com";
+          description = "Enterprise API base URL for organizations using a self-hosted opencode backend.";
+          example = "https://opencode.corp.example.com";
         };
       };
     });
     default = null;
-    description = "Enterprise configuration";
+    description = "Enterprise configuration for organizations with self-hosted opencode deployments.";
   };
 }
