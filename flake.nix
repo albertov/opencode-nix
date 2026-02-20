@@ -78,6 +78,15 @@
               exit 1
             fi
           '';
+
+          # Zod schema validation: validates generated configs against the
+          # upstream Config.Info Zod schema from the opencode source.
+          # Requires node_modules (fetched as a fixed-output derivation).
+          config-zod-tests = import ./nix/tests {
+            inherit pkgs opencode-src;
+            inherit (pkgs) lib;
+            mkOpenCodeConfig = lib.mkOpenCodeConfig;
+          };
         });
     };
 }
