@@ -65,7 +65,7 @@
 
           field-output-check = pkgs.runCommand "field-output-test" {} ''
             config=${lib.mkOpenCodeConfig [
-              { opencode.theme = "catppuccin"; opencode.logLevel = "debug"; }
+              { opencode.theme = "catppuccin"; opencode.logLevel = "DEBUG"; }
             ]}
             content=$(cat "$config")
             echo "Config: $content"

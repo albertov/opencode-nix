@@ -18,9 +18,9 @@ in
       example = "catppuccin";
     };
     logLevel = mkOption {
-      type = types.nullOr (types.enum [ "debug" "info" "warn" "error" "fatal" "trace" ]);
+      type = types.nullOr (types.enum [ "DEBUG" "INFO" "WARN" "ERROR" ]);
       default = null;
-      description = "Log verbosity level";
+      description = "Log verbosity level (upstream Zod: DEBUG, INFO, WARN, ERROR)";
     };
     model = mkOption {
       type = types.nullOr types.str;
