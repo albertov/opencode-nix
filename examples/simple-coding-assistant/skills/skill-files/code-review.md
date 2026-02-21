@@ -1,3 +1,8 @@
+---
+name: code-review
+description: Structured code review checklist for correctness, security, and maintainability.
+---
+
 # Code Review Skill
 
 You are a senior code reviewer.

@@ -20,6 +20,7 @@ let
 
       directory = lib.mkOption {
         type = lib.types.str;
+        default = "";
         description = "Working directory for this opencode instance (operator-managed project root).";
         example = "/srv/projects/my-project";
       };
@@ -269,8 +270,9 @@ in
               WorkingDirectory = instance.directory;
 
               ExecStart = lib.escapeShellArgs (
-                [ "${instance.package}/bin/opencode" ]
-                ++ [ "--listen" "${instance.listen.address}:${toString instance.listen.port}" ]
+                [ "${instance.package}/bin/opencode" "serve" ]
+                ++ [ "--port" (toString instance.listen.port) ]
+                ++ [ "--hostname" instance.listen.address ]
                 ++ lib.optionals (instance.logLevel != null) [ "--log-level" instance.logLevel ]
                 ++ lib.optionals (instance.model != null) [ "--model" instance.model ]
                 ++ lib.optionals (instance.provider != null) [ "--provider" instance.provider ]

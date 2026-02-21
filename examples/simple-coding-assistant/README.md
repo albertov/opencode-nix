@@ -7,7 +7,7 @@ It includes:
 
 - 1 instance (`my-project`)
 - 4 subagents (`general`, `explorer`, `implementer`, `reviewer`)
-- 2 skill prompt patterns (inline and file-based)
+- 2 runtime-loaded skills (`commit`, `code-review`)
 
 For a more complete and production-oriented setup, see
 `examples/chief-coding-assistant/`.
@@ -79,14 +79,33 @@ services.opencode.instances.my-project = {
 - `implementer`: code changes with TDD-first workflow
 - `reviewer`: correctness/security/type-safety review without editing
 
-## Skills: Inline vs File-Based
+Agents are configured via `opencode.agent` (singular), an attribute set keyed
+by agent name:
 
-This example demonstrates both patterns:
+```nix
+opencode.agent.general = {
+  mode = "subagent";
+  description = "General-purpose assistant";
+  prompt = ''
+    You are a general-purpose coding assistant.
+  '';
+};
+```
 
-- **Inline** (`commit`): good for short, self-contained prompts maintained
-  near configuration.
-- **File-based** (`code-review`): good for longer prompts that need dedicated
-  docs and independent maintenance.
+## Skills: Directory-Based Loading
+
+Skills are configured through `opencode.skills.paths`, which points to
+directories containing skill markdown files:
+
+```nix
+opencode.skills.paths = [ "${./skills/skill-files}" ];
+```
+
+For long agent prompts, use runtime file interpolation and a Nix store path:
+
+```nix
+opencode.agent.implementer.prompt = "{file:${./skills/implementer-prompt.md}}";
+```
 
 ## Service Operations
 

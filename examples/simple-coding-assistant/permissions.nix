@@ -4,7 +4,7 @@
 {
   # Baseline policy: allow common tools globally, then tighten per-agent with
   # each agent's own permission block.
-  opencode.permissions = {
+  opencode.permission = {
     "*" = "deny";
     read = "allow";
     bash = "allow";

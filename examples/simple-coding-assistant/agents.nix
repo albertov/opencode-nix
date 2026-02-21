@@ -1,27 +1,16 @@
-# Subagent catalog for the simple coding assistant example.
 { lib, ... }:
-
-let
-  defaultModel = "{env:OPENCODE_MODEL}";
-in
 {
-  opencode.agents = {
-    # General coordinator for broad research/planning workflows.
+  opencode.agent = {
     general = {
-      mode = "subagent";
-      name = "general";
       description = "General-purpose assistant for research, planning, and multi-step tasks";
-      model = defaultModel;
+      mode = "subagent";
       prompt = ''
-        You are a practical general coding assistant.
-        Help with research, planning, and sequencing multi-step work.
-        Start by clarifying goals, constraints, and risks from available context.
-        Break work into concrete, verifiable steps with clear ownership.
-        Prefer low-risk defaults and call out assumptions explicitly.
-        Summarize findings concisely and suggest the next best action.
+        You are a general-purpose coding assistant. Help with research, planning,
+        analysis, and coordination tasks. Prefer reading and understanding code
+        before suggesting changes. Use todo lists to track multi-step work.
+        Never modify files unless explicitly asked.
       '';
-      # Allow the orchestration tools needed for planning and handoff.
-      permissions = {
+      permission = {
         "*" = "deny";
         bash = "allow";
         read = "allow";
@@ -31,41 +20,27 @@ in
       };
     };
 
-    # Fast read-only scout for codebase reconnaissance.
     explorer = {
+      description = "Codebase scout — finds files, searches symbols, understands structure";
       mode = "subagent";
-      name = "explorer";
-      description = "Codebase scout for fast reconnaissance — finds files, searches symbols, understands structure";
-      model = defaultModel;
       prompt = ''
-        You are a fast codebase exploration specialist.
-        Locate relevant files quickly and map architecture before implementation.
-        Use structural search and targeted reads to answer concrete questions.
-        Do not modify files; produce concise evidence with file paths.
-        Highlight unknowns and where deeper analysis is needed.
+        You are a fast codebase explorer. Your job is reconnaissance only:
+        find files, search for symbols, and understand structure.
+        Never edit files. Never run commands that modify state.
+        Return precise, structured findings.
       '';
-      # Keep this agent strictly read-only for safe exploration.
-      permissions = {
+      permission = {
         "*" = "deny";
         read = "allow";
-        tilth_tilth_read = "allow";
-        tilth_tilth_search = "allow";
-        tilth_tilth_files = "allow";
         bash = "allow";
-        edit = "deny";
-        write = "deny";
       };
     };
 
-    # Implementation agent with file-based prompt for maintainability.
     implementer = {
-      mode = "subagent";
-      name = "implementer";
       description = "Code writer — implements features and fixes following TDD discipline";
-      model = defaultModel;
-      prompt = { file = ./skills/implementer-prompt.md; };
-      # Grant edit tools but block direct question prompts for deterministic flow.
-      permissions = {
+      mode = "subagent";
+      prompt = "{file:${./skills/implementer-prompt.md}}";
+      permission = {
         "*" = "deny";
         bash = "allow";
         read = "allow";
@@ -74,29 +49,22 @@ in
         todoread = "allow";
         todowrite = "allow";
         task = "allow";
-        question = "deny";
       };
     };
 
-    # Dedicated reviewer for quality checks without write capability.
     reviewer = {
-      mode = "subagent";
-      name = "reviewer";
       description = "Code reviewer — checks correctness, security, and type safety; never edits";
-      model = defaultModel;
+      mode = "subagent";
       prompt = ''
-        You are a rigorous code reviewer.
-        Validate correctness against stated behavior and expected edge cases.
-        Check for security risks, unsafe assumptions, and privilege issues.
-        Prioritize type safety and making invalid states unrepresentable.
-        Never modify files; return findings with severity and clear rationale.
+        You are a code reviewer. Analyze code for correctness, security vulnerabilities,
+        type safety, and maintainability. Be specific: cite file and line numbers.
+        Never edit files. Never run commands that modify state.
+        Focus on what matters: bugs, security issues, unclear invariants.
       '';
-      # Reviewer can inspect and run read-only diagnostics only.
-      permissions = {
+      permission = {
         "*" = "deny";
         read = "allow";
         bash = "allow";
-        edit = "deny";
       };
     };
   };
