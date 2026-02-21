@@ -93,7 +93,8 @@ This generates:
 | `networkIsolation.outboundAllowCidrs` | [str] | [] | Allowed CIDR ranges |
 | `preInitScript` | str | null | Script before setup steps |
 | `postInitScript` | str | null | Script after setup steps |
-| `opencodeCfg` | [modules] | [] | opencode.json config modules |
+| `config` | submodule | `{}` | Typed opencode.json config options (same as `nix/config/default.nix`) |
+| `configFile` | path or null | `null` | Explicit path to opencode.json; overrides `config` when set |
 
 ## Secrets
 

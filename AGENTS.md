@@ -79,4 +79,4 @@ After completing implementation beads (GREEN commits), immediately update the co
 
 ## Key module options (nix/nixos/module.nix)
 
-`services.opencode.instances.<name>`: `directory` (required), `stateDir`, `listen.{address,port}`, `openFirewall`, `environment`, `environmentFile`, `path`, `logLevel`, `model`, `provider`, `extraArgs`, `sandbox.{readWritePaths,readOnlyPaths,unixSockets.allow}`, `networkIsolation.{enable,outboundAllowCidrs}`, `preInitScript`, `postInitScript`, `opencodeCfg`
+`services.opencode.instances.<name>`: `directory` (required), `stateDir`, `listen.{address,port}`, `openFirewall`, `environment`, `environmentFile`, `path`, `logLevel`, `model`, `provider`, `extraArgs`, `sandbox.{readWritePaths,readOnlyPaths,unixSockets.allow}`, `networkIsolation.{enable,outboundAllowCidrs}`, `preInitScript`, `postInitScript`, `config`, `configFile`

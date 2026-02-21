@@ -55,7 +55,7 @@ You can import this example module directly in your NixOS configuration.
 
 ## Minimal Configuration Snippet
 
-The core service declaration used by this example:
+The core service declaration used by this example (with `ocLib = pkgs.lib.opencode`):
 
 ```nix
 services.opencode.instances.my-project = {
@@ -64,13 +64,16 @@ services.opencode.instances.my-project = {
   environment.OPENCODE_LOG_LEVEL = "info";
   environmentFile = "/run/secrets/opencode-my-project";
   path = [ pkgs.git pkgs.ripgrep ];
-  opencodeCfg = [
+  configFile = ocLib.mkOpenCodeConfig [
     ./agents.nix
     ./permissions.nix
     ./skills
   ];
 };
 ```
+
+For standalone module composition, build `opencode.json` with
+`ocLib.mkOpenCodeConfig` and pass the result via `configFile`.
 
 ## Subagent Roles
 
