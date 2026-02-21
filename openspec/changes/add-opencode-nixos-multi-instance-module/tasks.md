@@ -56,17 +56,17 @@
 - [x] 7.3 Add filesystem and sandbox tests (default deny behavior, allowlist positive cases, disallowed path/socket negative cases).
 - [x] 7.4 Add state tests for default `stateDir`, separation from `directory`, cross-instance denial, and backup-friendly host path behavior.
 - [x] 7.5 Add setup service tests for first-run initialization, idempotent reruns, and no `directory` mutation.
-- [ ] 7.6 Add network tests for inbound/firewall behavior, outbound allow/block behavior, and blocked-attempt log observability with rate limiting.
+- [x] 7.6 Add network tests for inbound/firewall behavior, outbound allow/block behavior, and blocked-attempt log observability with rate limiting. _Evidence: nix/nixos/tests/network-policy.nix (multi-node behavioral test), nix/nixos/tests/open-firewall.nix (openFirewall VM test), nix/nixos/tests/eval-tests.nix (firewall eval tests)._
 - [x] 7.7 Add environment tests for `environment` injection, `environmentFile` loading, precedence order, and `/run/secrets/*` compatibility.
 - [x] 7.8 Add regression tests proving module path reuses existing opencode.json generation machinery.
 - [x] 7.9 Add tests verifying `path` injection makes declared tools available and default HOME is writable/instance-scoped.
 - [x] 7.10 Add tests verifying `HOME = stateDir`, incremental setup of HOME subpaths, and non-destructive behavior on reruns.
 - [x] 7.11 Add tests verifying `$HOME/.config/opencode/opencode.json` symlink target correctness and coexistence with declarative extension pathways (for example `opencode.skills.paths`).
-- [ ] 7.12 Add setup hook tests verifying pre-before-core-before-post ordering and that hook failures fail setup.
+- [x] 7.12 Add setup hook tests verifying pre-before-core-before-post ordering and that hook failures fail setup. _Evidence: nix/nixos/tests/hook-ordering.nix (timestamp ordering), nix/nixos/tests/hook-failure.nix (exit 1 blocks service)._
 
 ## 8. Documentation and rollout checks
 
 - [x] 8.1 Document canonical module usage with multi-instance examples, security defaults, and explicit allowlist patterns.
 - [x] 8.2 Document state directory operational guidance (backup/restore, permissions, and isolation expectations).
-- [ ] 8.3 Document network troubleshooting workflow using blocked-outbound logs to iteratively tune CIDR allow-lists.
+- [x] 8.3 Document network troubleshooting workflow using blocked-outbound logs to iteratively tune CIDR allow-lists. _Evidence: nix/nixos/README.md "Network Policy Troubleshooting" section._
 - [x] 8.4 Run project verification commands (including NixOS/module tests and `nix flake check`) and capture follow-up issues.

@@ -199,11 +199,11 @@ systemctl status nftables.service
 journalctl -u nftables.service
 ```
 
-The service includes a pre-start check (`ExecStartPre`) that refuses to launch if the egress policy is not active, preventing the instance from running without its intended network constraints.
+The opencode service requires its setup unit to complete before starting. If the nftables service fails or the egress table is not loaded, the service may start without intended network constraints - verify with `nft list table inet opencode-egress` after service startup.
 
 ### Compatibility note
 
-`networkIsolation.enable = true` requires nftables (`networking.nftables.enable = true`). It is incompatible with `networking.firewall.enable = true` (the legacy iptables-based firewall). NixOS evaluation will fail with an actionable error if both are enabled for the same host.
+`networkIsolation.enable = true` requires nftables (`networking.nftables.enable = true`). The opencode egress policy table (`inet opencode-egress`) coexists safely with the NixOS firewall (`networking.firewall.enable = true`) - both use nftables internally on NixOS 24.11+. You can use `openFirewall = true` and `networkIsolation.enable = true` together on the same instance.
 
 ## NixOS Tests
 
