@@ -21,7 +21,7 @@ pkgs.testers.nixosTest {
       {
         imports = [ (import ../module.nix) ];
 
-        environment.systemPackages = [ pkgs.python3 ];
+        environment.systemPackages = [ pkgs.curl pkgs.python3 ];
 
         # nftables required for networkIsolation
         networking.nftables.enable = true;
@@ -63,6 +63,27 @@ pkgs.testers.nixosTest {
     machine.wait_for_open_port(8787)
     machine.succeed("python3 ${healthcheckScript}")
 
-    print("network-policy: PASS")
+    # == Behavioral traffic probes ==
+
+    # Start a local HTTP listener so we have a concrete target
+    machine.execute("python3 -m http.server 19999 &>/tmp/httpd.log &")
+    machine.sleep(1)
+
+    # ALLOWED: connection from the service user to an IP inside 10.0.0.0/8
+    # 10.0.2.15 is this QEMU VM's own IP - inside the allowed CIDR.
+    # curl exits: 0 (200 OK), 22 (non-2xx), or 7 (connection refused) all mean
+    # the packet got through nftables. Exit 28 (timeout) would mean it was dropped.
+    machine.succeed("sudo -u opencode-isolated curl --max-time 5 --silent http://10.0.2.15:19999/; code=$?; [ $code -ne 28 ]")
+
+    # BLOCKED: connection to external IP (outside 10.0.0.0/8) - must be dropped
+    # nftables DROP -> curl times out -> exits non-zero -> machine.fail assertion holds
+    machine.fail("sudo -u opencode-isolated curl --max-time 3 --silent http://1.1.1.1:19999/")
+
+    # OBSERVABILITY: after the blocked probe, kernel log must contain the log prefix
+    machine.wait_until_succeeds(
+      "journalctl -k | grep -q 'opencode-isolated-blocked'",
+      timeout=10
+    )
+    print("network-policy: behavioral probes PASS")
   '';
 }
