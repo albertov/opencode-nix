@@ -102,6 +102,83 @@ instances.restricted = {
 
 Requires nftables. Blocked attempts are logged (rate-limited) with prefix `opencode-<name>-blocked:`.
 
+## Network Policy Troubleshooting
+
+When `networkIsolation.enable = true`, blocked outbound connection attempts are logged to the system journal with the format:
+
+```
+opencode-<instance-name>-blocked: OUT=<iface> SRC=<src-ip> DST=<dst-ip> PROTO=TCP ...
+```
+
+### Inspect blocked attempts
+
+View recent blocked attempts for a specific instance:
+
+```bash
+# All blocked attempts (all instances)
+journalctl -k | grep 'opencode-.*-blocked'
+
+# Specific instance
+journalctl -k | grep 'opencode-my-project-blocked'
+
+# Real-time monitoring
+journalctl -kf | grep 'opencode-my-project-blocked'
+```
+
+### Identify the destination to allowlist
+
+Each log entry contains `DST=<ip>`. Extract unique blocked destinations:
+
+```bash
+journalctl -k | grep 'opencode-my-project-blocked' \
+  | grep -oP 'DST=\K[\d.]+' | sort -u
+```
+
+### Add a CIDR to the allowlist
+
+Once you've identified required destinations, update your NixOS config:
+
+```nix
+services.opencode.instances.my-project = {
+  networkIsolation = {
+    enable = true;
+    outboundAllowCidrs = [
+      "10.10.0.0/16"    # internal APIs
+      "34.120.0.0/14"   # newly discovered destination range
+    ];
+  };
+};
+```
+
+Then rebuild and switch:
+
+```bash
+nixos-rebuild switch --flake .#my-host
+```
+
+### Rate limiting
+
+Blocked attempt logging is rate-limited to **5 log entries per minute per instance** to avoid log spam. If an instance is generating many blocked attempts, the rate limiter will suppress some entries - tune the allowlist based on the sampled entries and re-verify.
+
+### Check nftables policy is active
+
+If a service with `networkIsolation.enable = true` fails to start, verify the nftables table is loaded:
+
+```bash
+# List the opencode egress table
+nft list table inet opencode-egress
+
+# If missing, check nftables service
+systemctl status nftables.service
+journalctl -u nftables.service
+```
+
+The service includes a pre-start check (`ExecStartPre`) that refuses to launch if the egress policy is not active, preventing the instance from running without its intended network constraints.
+
+### Compatibility note
+
+`networkIsolation.enable = true` requires nftables (`networking.nftables.enable = true`). It is incompatible with `networking.firewall.enable = true` (the legacy iptables-based firewall). NixOS evaluation will fail with an actionable error if both are enabled for the same host.
+
 ## NixOS Tests
 
 VM tests are in `nix/nixos/tests/`. Build with:
