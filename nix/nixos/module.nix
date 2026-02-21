@@ -89,6 +89,37 @@ let
         example = [ "--log-level" "debug" ];
       };
 
+      # NOTE: Rejecting interactive-mode flags in extraArgs is intentionally not
+      # enforced statically here; robust CLI flag validation at Nix eval time is brittle.
+
+      # Runtime options
+      logLevel = lib.mkOption {
+        type = lib.types.nullOr (lib.types.enum [ "debug" "info" "warn" "error" ]);
+        default = null;
+        description = "Log level for the opencode instance.";
+      };
+
+      model = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Model identifier to use (e.g. 'claude-opus-4-5').";
+      };
+
+      provider = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Provider to use (e.g. 'anthropic', 'openai').";
+      };
+
+      opencodeCfg = lib.mkOption {
+        type = lib.types.listOf lib.types.anything;
+        default = [];
+        description = "NixOS module expressions for opencode.json config generation (passed to mkOpenCodeConfig).";
+        example = lib.literalExpression ''
+          [ { theme = "catppuccin"; } ]
+        '';
+      };
+
       sandbox = {
         readWritePaths = lib.mkOption {
           type = lib.types.listOf lib.types.str;
@@ -143,6 +174,18 @@ let
   ) cfg.instances;
 
   enabledInstances = lib.filterAttrs (_: instance: instance.enable) mergedInstances;
+
+  # Generate opencode.json for an instance using the existing lib machinery.
+  mkInstanceConfig = name: instance:
+    let
+      # Use opencode lib from pkgs (overlay) or fall back to direct import.
+      ocLib = if pkgs ? lib && pkgs.lib ? opencode
+        then pkgs.lib.opencode
+        else import ../config/lib.nix { inherit pkgs; lib = pkgs.lib; };
+    in
+    if instance.opencodeCfg != []
+    then ocLib.mkOpenCodeConfig instance.opencodeCfg
+    else null;
 
   groupNames = lib.unique (lib.mapAttrsToList (_: instance: instance.group) enabledInstances);
 in
@@ -201,7 +244,11 @@ in
               WorkingDirectory = instance.directory;
 
               ExecStart = lib.escapeShellArgs (
-                [ "${instance.package}/bin/opencode" "--listen" "${instance.listen.address}:${toString instance.listen.port}" ]
+                [ "${instance.package}/bin/opencode" ]
+                ++ [ "--listen" "${instance.listen.address}:${toString instance.listen.port}" ]
+                ++ lib.optionals (instance.logLevel != null) [ "--log-level" instance.logLevel ]
+                ++ lib.optionals (instance.model != null) [ "--model" instance.model ]
+                ++ lib.optionals (instance.provider != null) [ "--provider" instance.provider ]
                 ++ instance.extraArgs
               );
 
@@ -255,16 +302,25 @@ in
             User = instance.user;
             Group = instance.group;
 
-            ExecStart = pkgs.writeShellScript "opencode-${name}-setup" ''
-              set -euo pipefail
-              ${lib.optionalString (instance.preInitScript != null) instance.preInitScript}
+            ExecStart =
+              let
+                generatedConfig = mkInstanceConfig name instance;
+              in
+              pkgs.writeShellScript "opencode-${name}-setup" ''
+                set -euo pipefail
+                ${lib.optionalString (instance.preInitScript != null) instance.preInitScript}
 
-              # Initialize state directory structure (idempotent)
-              mkdir -p "${instance.stateDir}/.local/share/opencode"
-              mkdir -p "${instance.stateDir}/.config/opencode"
+                # Initialize state directory structure (idempotent)
+                mkdir -p "${instance.stateDir}/.local/share/opencode"
+                mkdir -p "${instance.stateDir}/.config/opencode"
 
-              ${lib.optionalString (instance.postInitScript != null) instance.postInitScript}
-            '';
+                ${lib.optionalString (generatedConfig != null) ''
+                  # Symlink generated opencode.json (from Nix store)
+                  ln -sf "${generatedConfig}" "${instance.stateDir}/.config/opencode/opencode.json"
+                ''}
+
+                ${lib.optionalString (instance.postInitScript != null) instance.postInitScript}
+              '';
           };
         }
       ) enabledInstances)
