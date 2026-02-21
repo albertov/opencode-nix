@@ -54,6 +54,8 @@ The system MUST fail safely when outbound network isolation is enabled but requi
 - **WHEN** `networkIsolation.enable = true` and `networking.nftables.enable = false`
 - **THEN** NixOS evaluation fails with an actionable assertion error.
 
-#### Scenario: Isolation enabled while legacy firewall backend is active
-- **WHEN** any instance enables `networkIsolation.enable = true` and `networking.firewall.enable = true`
-- **THEN** NixOS evaluation fails with an actionable assertion error describing the nftables requirement.
+#### Scenario: Isolation enabled with host firewall exposure
+- **WHEN** an instance enables `networkIsolation.enable = true`, `networking.nftables.enable = true`, and `networking.firewall.enable = true`
+- **THEN** NixOS evaluation succeeds
+- **AND** outbound isolation is enforced by the instance egress policy table
+- **AND** inbound exposure remains controlled by host firewall rules (for example via `openFirewall = true`).
