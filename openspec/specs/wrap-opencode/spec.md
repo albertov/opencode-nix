@@ -6,30 +6,49 @@ Library function that wraps the opencode binary with a generated config file bak
 
 ### Requirement: Function signature
 
-`lib.wrapOpenCode` accepts an attrset with `name`, `modules`, and optional `opencode` package.
+`pkgs.lib.opencode.wrapOpenCode` MUST accept an attrset with `name`, `modules`, and optional `opencode` package.
+
+When `opencode` is omitted, the default package MUST resolve from the active overlay package set for that system, and MUST NOT be hardcoded to `x86_64-linux`.
+
+#### Scenario: Overlay exposes helper namespace
+
+- **WHEN** nixpkgs is instantiated with this flake's overlay
+- **THEN** `pkgs.lib.opencode.wrapOpenCode` exists and is callable.
+
+#### Scenario: Overlay namespace is canonical helper interface
+
+- **WHEN** consumers use helper functions from this flake
+- **THEN** the supported entrypoint is `pkgs.lib.opencode.*` via overlayed nixpkgs
+- **AND** consumers are not required to use flake-level helper entrypoints.
 
 #### Scenario: Basic invocation
 
-WHEN called as:
+- **WHEN** called as:
 ```nix
-lib.wrapOpenCode {
+pkgs.lib.opencode.wrapOpenCode {
   name = "my-opencode";
   modules = [ { theme = "dark"; agent.plan.steps = 100; } ];
 }
 ```
-THEN it returns a derivation containing a wrapped `opencode` binary.
+- **THEN** it returns a derivation containing a wrapped `opencode` binary.
 
 #### Scenario: Custom opencode package
 
-WHEN called with an explicit `opencode` argument:
+- **WHEN** called with an explicit `opencode` argument:
 ```nix
-lib.wrapOpenCode {
+pkgs.lib.opencode.wrapOpenCode {
   name = "my-opencode";
   modules = [ { theme = "dark"; } ];
   opencode = pkgs.opencode;
 }
 ```
-THEN it wraps that specific opencode package instead of a default.
+- **THEN** it wraps that specific opencode package instead of a default.
+
+#### Scenario: Default package follows selected system
+
+- **WHEN** called without an explicit `opencode` on a supported non-x86_64 system
+- **THEN** default package resolution uses the active overlay package set for `<that-system>`
+- **AND** evaluation does not depend on `opencode.packages.x86_64-linux.default`.
 
 ---
 
@@ -44,8 +63,8 @@ THEN the `OPENCODE_CONFIG` environment variable points to the Nix store path of 
 
 #### Scenario: Config is generated via mkOpenCodeConfig
 
-WHEN `wrapOpenCode` is called with modules
-THEN it internally calls `mkOpenCodeConfig` with those modules to produce the config derivation.
+- **WHEN** `pkgs.lib.opencode.wrapOpenCode` is called with modules
+- **THEN** it internally calls `pkgs.lib.opencode.mkOpenCodeConfig` with those modules to produce the config derivation.
 
 #### Scenario: Config survives garbage collection
 
