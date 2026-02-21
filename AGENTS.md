@@ -48,11 +48,15 @@ nix build .#nixosTests.<name>            # individual VM test (requires KVM)
 nix eval .#overlays.default              # sanity-check overlay evaluates
 ```
 
+- **Mandatory GREEN gate** — run `nix flake check` immediately before any `GREEN:` commit.
+- **No exceptions** — if `nix flake check` fails, do not create a `GREEN:` commit.
+- **Mandatory test wiring** — all tests (Nix eval/unit checks and NixOS VM integration tests) MUST be wired into `checks.*` so they run via `nix flake check`; do not leave tests only runnable through ad-hoc `nix build .#nixosTests.<name>` commands.
+
 ## Commit conventions
 
 | Prefix | When |
 |--------|------|
-| `GREEN: <bead-ids>:` | Implementation complete, all gates pass |
+| `GREEN: <bead-ids>:` | Implementation complete, all gates pass; requires a fresh successful `nix flake check` run immediately before commit |
 | `RED: <bead-ids>:` | Failing tests committed (TDD red phase) |
 | `FIX-BASELINE:` | Pre-existing lint/warning cleanup |
 
