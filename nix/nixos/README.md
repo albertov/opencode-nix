@@ -75,6 +75,7 @@ This generates:
 | `enable` | bool | true | Enable this instance |
 | `directory` | str | required | Project working directory |
 | `stateDir` | str | `/var/lib/opencode/instance-state/<name>` | Runtime state (HOME) |
+| `extraGroups` | [str] | [] | Supplementary groups for instance user |
 | `listen.address` | str | `127.0.0.1` | Listen address |
 | `listen.port` | port | `8080` | Listen port |
 | `openFirewall` | bool | false | Open firewall for listen port |

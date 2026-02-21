@@ -50,6 +50,16 @@ let
           description = "Group for this instance.";
         };
 
+        extraGroups = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Supplementary groups for this instance's system user.";
+          example = [
+            "docker"
+            "media"
+          ];
+        };
+
         listen = {
           address = lib.mkOption {
             type = lib.types.str;
@@ -468,6 +478,7 @@ in
       lib.nameValuePair instance.user {
         isSystemUser = true;
         inherit (instance) group;
+        inherit (instance) extraGroups;
         home = instance.stateDir;
         createHome = true;
       }

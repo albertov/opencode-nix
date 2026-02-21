@@ -177,6 +177,29 @@ let
       builtins.elem 8787 cfg.networking.firewall.allowedTCPPorts
       && cfg.networking.nftables.tables ? "opencode-egress";
     "PASS: openFirewall and networkIsolation evaluate together with nftables table";
+
+  test-extra-groups =
+    let
+      cfg = evalNixos [
+        {
+          users.groups.docker = { };
+          users.groups.media = { };
+          services.opencode = {
+            enable = true;
+            instances.grouped = {
+              directory = "/srv/grouped";
+              extraGroups = [
+                "docker"
+                "media"
+              ];
+            };
+          };
+        }
+      ];
+      groups = cfg.users.users."opencode-grouped".extraGroups;
+    in
+    assert builtins.elem "docker" groups && builtins.elem "media" groups;
+    "PASS: extraGroups wired to user supplementary groups";
 in
 pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo "Running opencode NixOS module evaluation tests..."
@@ -190,6 +213,7 @@ pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo ${lib.escapeShellArg test-defaults-merge}
   echo ${lib.escapeShellArg test-firewall-open}
   echo ${lib.escapeShellArg test-firewall-and-isolation-coexist}
+  echo ${lib.escapeShellArg test-extra-groups}
   echo "All eval tests passed."
   touch "$out"
 ''
