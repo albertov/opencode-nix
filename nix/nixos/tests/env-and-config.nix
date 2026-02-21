@@ -25,7 +25,10 @@ pkgs.testers.nixosTest {
 
       environment.systemPackages = [ pkgs.python3 ];
 
-      environment.etc."test-opencode.env".text = "SECRET_VAR=supersecret\n";
+      environment.etc."test-opencode.env".text = ''
+        SECRET_VAR=supersecret
+        OVERRIDE_ME=from-envfile
+      '';
 
       services.opencode = {
         enable = true;
@@ -34,6 +37,7 @@ pkgs.testers.nixosTest {
           directory = "/srv/env-test";
           listen.port = 8787;
           environment.MY_VAR = "hello";
+          environment.OVERRIDE_ME = "from-env";
           environmentFile = "/etc/test-opencode.env";
           opencodeCfg = [ { opencode.theme = "dark"; } ];
         };
@@ -48,6 +52,7 @@ pkgs.testers.nixosTest {
     machine.wait_for_open_port(8787)
     machine.succeed("python3 ${healthcheckScript}")
     machine.succeed("systemctl show opencode-env-test.service --property=Environment | grep -q MY_VAR=hello")
+    machine.succeed("tr '\\0' '\\n' < /proc/$(systemctl show opencode-env-test.service -p MainPID --value)/environ | grep -x 'OVERRIDE_ME=from-envfile'")
 
     state_dir = "/var/lib/opencode/instance-state/env-test"
     machine.succeed(f"test -L {state_dir}/.config/opencode/opencode.json")
