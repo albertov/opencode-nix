@@ -131,6 +131,52 @@ let
     in
     assert builtins.match ".*9090.*" execStart != null;
     "PASS: instance listen.port overrides defaults";
+
+  test-firewall-open =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.exposed = {
+              directory = "/srv/exposed";
+              openFirewall = true;
+              listen.port = 8787;
+            };
+          };
+        }
+      ];
+    in
+    assert builtins.elem 8787 cfg.networking.firewall.allowedTCPPorts;
+    "PASS: openFirewall=true adds listen.port to allowedTCPPorts";
+
+  test-firewall-and-isolation-coexist =
+    let
+      cfg = evalNixos [
+        {
+          networking.nftables.enable = true;
+          services.opencode = {
+            enable = true;
+            instances = {
+              exposed = {
+                directory = "/srv/exposed";
+                openFirewall = true;
+                listen.port = 8787;
+              };
+              isolated = {
+                directory = "/srv/isolated";
+                listen.port = 9090;
+                networkIsolation.enable = true;
+              };
+            };
+          };
+        }
+      ];
+    in
+    assert
+      builtins.elem 8787 cfg.networking.firewall.allowedTCPPorts
+      && cfg.networking.nftables.tables ? "opencode-egress";
+    "PASS: openFirewall and networkIsolation evaluate together with nftables table";
 in
 pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo "Running opencode NixOS module evaluation tests..."
@@ -142,6 +188,8 @@ pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo ${lib.escapeShellArg test-unix-socket}
   echo ${lib.escapeShellArg test-env-file}
   echo ${lib.escapeShellArg test-defaults-merge}
+  echo ${lib.escapeShellArg test-firewall-open}
+  echo ${lib.escapeShellArg test-firewall-and-isolation-coexist}
   echo "All eval tests passed."
   touch "$out"
 ''

@@ -148,6 +148,7 @@
               text = ''
                 exec nix build \
                   .#checks.x86_64-linux.multi-instance \
+                  .#checks.x86_64-linux.open-firewall \
                   .#checks.x86_64-linux.network-policy \
                   .#checks.x86_64-linux.sandbox-isolation \
                   .#checks.x86_64-linux.setup-idempotence \

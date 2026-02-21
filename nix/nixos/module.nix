@@ -249,35 +249,26 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions =
-      (lib.flatten (
-        lib.mapAttrsToList (name: instance: [
-          {
-            assertion = instance.directory != "";
-            message = "services.opencode.instances.${name}.directory must not be empty";
-          }
-          {
-            assertion = instance.listen.port >= 1 && instance.listen.port <= 65535;
-            message = "services.opencode.instances.${name}.listen.port must be between 1 and 65535 (got ${toString instance.listen.port})";
-          }
-          {
-            assertion = instance.stateDir != instance.directory;
-            message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
-          }
-          {
-            assertion = !instance.networkIsolation.enable || config.networking.nftables.enable;
-            message = "opencode: networkIsolation requires networking.nftables.enable = true";
-          }
-        ]) (lib.filterAttrs (_: i: i.enable) mergedInstances)
-      ))
-      ++ [
+    assertions = lib.flatten (
+      lib.mapAttrsToList (name: instance: [
         {
-          # NOTE: nftables is auto-enabled by this module for isolated instances,
-          # but nftables + legacy firewall can conflict on some NixOS versions.
-          assertion = !(isolatedInstances != { } && config.networking.firewall.enable);
-          message = "services.opencode networkIsolation requires networking.firewall.enable = false when isolation is active";
+          assertion = instance.directory != "";
+          message = "services.opencode.instances.${name}.directory must not be empty";
         }
-      ];
+        {
+          assertion = instance.listen.port >= 1 && instance.listen.port <= 65535;
+          message = "services.opencode.instances.${name}.listen.port must be between 1 and 65535 (got ${toString instance.listen.port})";
+        }
+        {
+          assertion = instance.stateDir != instance.directory;
+          message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
+        }
+        {
+          assertion = !instance.networkIsolation.enable || config.networking.nftables.enable;
+          message = "opencode: networkIsolation requires networking.nftables.enable = true";
+        }
+      ]) (lib.filterAttrs (_: i: i.enable) mergedInstances)
+    );
 
     systemd.services = lib.mkMerge [
       (lib.mapAttrs' (

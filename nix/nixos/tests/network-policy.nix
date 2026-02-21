@@ -89,6 +89,20 @@ pkgs.testers.nixosTest {
       "journalctl -k | grep -q 'opencode-isolated-blocked'",
       timeout=10
     )
+
+    # == Rate-limit observability test ==
+    # Generate a burst of 10 blocked connection attempts
+    for i in range(10):
+        machine.execute("sudo -u opencode-isolated curl --max-time 1 --silent http://1.1.1.1:19999/ || true")
+    machine.sleep(2)
+
+    # Count logged blocked entries — rate limit is 5/minute, so we expect <= 5 (not all 10+)
+    # (we had 1 from the earlier probe + 10 from burst = 11 total attempts, but only <=6 should be logged)
+    count = int(machine.succeed("journalctl -k | grep -c 'opencode-isolated-blocked' || echo 0").strip())
+    assert count <= 6, f"Expected rate-limited log entries (<=6), got {count} — rate limiting not working"
+    assert count >= 1, f"Expected at least 1 log entry, got {count}"
+    print(f"network-policy: rate-limit check PASS (logged {count} of 11+ attempts)")
+
     print("network-policy: behavioral probes PASS")
   '';
 }

@@ -1,6 +1,7 @@
 { pkgs }:
 {
   multi-instance = import ./multi-instance.nix { inherit pkgs; };
+  open-firewall = import ./open-firewall.nix { inherit pkgs; };
   network-policy = import ./network-policy.nix { inherit pkgs; };
   sandbox-isolation = import ./sandbox-isolation.nix { inherit pkgs; };
   setup-idempotence = import ./setup-idempotence.nix { inherit pkgs; };
