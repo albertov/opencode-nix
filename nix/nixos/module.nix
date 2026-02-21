@@ -141,12 +141,21 @@ let
           description = "Provider to use (e.g. 'anthropic', 'openai').";
         };
 
-        opencodeCfg = lib.mkOption {
-          type = lib.types.listOf lib.types.anything;
-          default = [ ];
-          description = "NixOS module expressions for opencode.json config generation (passed to mkOpenCodeConfig).";
-          example = lib.literalExpression ''
-            [ { theme = "catppuccin"; } ]
+        config = lib.mkOption {
+          type = lib.types.submoduleWith {
+            modules = [ ../config/submodule.nix ];
+          };
+          default = { };
+          description = "Typed opencode configuration. Same options as nix/config/default.nix without the opencode. prefix.";
+        };
+
+        configFile = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = ''
+            Explicit path to opencode.json config file.
+            When set, bypasses JSON generation from the config submodule.
+            When null (default), JSON is generated from the config option values.
           '';
         };
 
@@ -211,21 +220,40 @@ let
     _: instance: instance.enable && instance.networkIsolation.enable
   ) mergedInstances;
 
-  # Generate opencode.json for an instance using the existing lib machinery.
-  mkInstanceConfig =
-    _name: instance:
+  # Recursively strip null values from an attrset.
+  # Used to prevent instance null defaults from shadowing non-null shared defaults.
+  stripNulls =
+    attrs:
+    lib.mapAttrs (_: v: if builtins.isAttrs v then stripNulls v else v) (
+      lib.filterAttrs (_: v: v != null) attrs
+    );
+
+  # Resolve the opencode.json config file path for an instance.
+  # Precedence: explicit configFile > generated from config submodule.
+  resolveConfigFile =
+    name: _mergedInstance:
     let
-      # Use opencode lib from pkgs (overlay) or fall back to direct import.
-      ocLib =
-        if pkgs ? lib && pkgs.lib ? opencode then
-          pkgs.lib.opencode
-        else
-          import ../config/lib.nix {
-            inherit pkgs;
-            inherit (pkgs) lib;
-          };
+      rawInstance = cfg.instances.${name};
     in
-    if instance.opencodeCfg != [ ] then ocLib.mkOpenCodeConfig instance.opencodeCfg else null;
+    if rawInstance.configFile != null then
+      rawInstance.configFile
+    else
+      let
+        ocLib =
+          if pkgs ? lib && pkgs.lib ? opencode then
+            pkgs.lib.opencode
+          else
+            import ../config/lib.nix {
+              inherit pkgs;
+              inherit (pkgs) lib;
+            };
+        # Strip nulls before merge: instance unset values (null) must not shadow
+        # explicitly-set defaults. After stripping, recursiveUpdate gives instance precedence.
+        defaultsCfg = stripNulls cfg.defaults.config;
+        instanceCfg = stripNulls rawInstance.config;
+        mergedCfg = lib.recursiveUpdate defaultsCfg instanceCfg;
+      in
+      ocLib.mkOpenCodeConfigFromAttrs mergedCfg;
 
   groupNames = lib.unique (lib.mapAttrsToList (_: instance: instance.group) enabledInstances);
 in
@@ -396,7 +424,7 @@ in
 
             ExecStart =
               let
-                generatedConfig = mkInstanceConfig name instance;
+                configPath = resolveConfigFile name instance;
               in
               pkgs.writeShellScript "opencode-${name}-setup" ''
                 set -euo pipefail
@@ -406,10 +434,8 @@ in
                 mkdir -p "${instance.stateDir}/.local/share/opencode"
                 mkdir -p "${instance.stateDir}/.config/opencode"
 
-                ${lib.optionalString (generatedConfig != null) ''
-                  # Symlink generated opencode.json (from Nix store)
-                  ln -sf "${generatedConfig}" "${instance.stateDir}/.config/opencode/opencode.json"
-                ''}
+                # Symlink config (generated from config submodule or explicit configFile)
+                ln -sf "${configPath}" "${instance.stateDir}/.config/opencode/opencode.json"
 
                 ${lib.optionalString (instance.postInitScript != null) instance.postInitScript}
               '';

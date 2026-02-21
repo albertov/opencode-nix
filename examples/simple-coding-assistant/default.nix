@@ -3,6 +3,17 @@
 # see examples/chief-coding-assistant.
 { pkgs, ... }:
 
+let
+  ocLib =
+    if pkgs ? lib && pkgs.lib ? opencode then
+      pkgs.lib.opencode
+    else
+      import ../../nix/config/lib.nix {
+        inherit pkgs;
+        inherit (pkgs) lib;
+      };
+in
+
 {
   services.opencode.instances.my-project = {
     # Keep the project worktree outside the module so operators can point each
@@ -25,7 +36,7 @@
     ];
 
     # Compose opencode.json from focused modules.
-    opencodeCfg = [
+    configFile = ocLib.mkOpenCodeConfig [
       ./agents.nix
       ./permissions.nix
       ./skills

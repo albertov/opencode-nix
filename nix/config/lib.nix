@@ -67,6 +67,21 @@ let
     in
     pkgs.writeText "opencode.json" configJSON;
 
+  # Generate opencode.json from a raw config attrset (for NixOS submodule integration).
+  # Same pipeline as mkOpenCodeConfig but skips evalModules (input is already evaluated).
+  mkOpenCodeConfigFromAttrs =
+    attrs:
+    let
+      normalized = normalizeConfig attrs;
+      cleaned = cleanConfig normalized;
+      withSchema = {
+        "$schema" = "https://opencode.ai/config.json";
+      }
+      // cleaned;
+      configJSON = builtins.toJSON withSchema;
+    in
+    pkgs.writeText "opencode.json" configJSON;
+
   wrapOpenCode =
     {
       name ? "opencode",
@@ -93,5 +108,5 @@ let
 
 in
 {
-  inherit mkOpenCodeConfig wrapOpenCode;
+  inherit mkOpenCodeConfig mkOpenCodeConfigFromAttrs wrapOpenCode;
 }

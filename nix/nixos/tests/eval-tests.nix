@@ -200,6 +200,124 @@ let
     in
     assert builtins.elem "docker" groups && builtins.elem "media" groups;
     "PASS: extraGroups wired to user supplementary groups";
+
+  # -- Config submodule tests (ocnix-jqv.1.2) -------------------------
+
+  test-config-submodule =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.dev = {
+              directory = "/srv/dev";
+              config.model = "anthropic/claude-sonnet-4-20250514";
+            };
+          };
+        }
+      ];
+    in
+    assert cfg.systemd.services ? "opencode-dev-setup";
+    "PASS: config submodule evaluates with model set";
+
+  test-config-nested =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.dev = {
+              directory = "/srv/dev";
+              config.tui.theme = "dark";
+            };
+          };
+        }
+      ];
+    in
+    assert cfg.systemd.services ? "opencode-dev-setup";
+    "PASS: nested config option (tui.theme) evaluates";
+
+  test-config-file-override =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.dev = {
+              directory = "/srv/dev";
+              configFile = pkgs.writeText "test-opencode.json" "{}";
+            };
+          };
+        }
+      ];
+      setupExec = cfg.systemd.services."opencode-dev-setup".serviceConfig.ExecStart;
+      setupScript = builtins.readFile setupExec;
+    in
+    assert builtins.match ".*test-opencode\\.json.*" setupScript != null;
+    "PASS: explicit configFile appears in setup script";
+
+  test-opencodecfg-rejected =
+    let
+      succeeded =
+        (builtins.tryEval (
+          builtins.deepSeq (evalNixos [
+            {
+              services.opencode = {
+                enable = true;
+                instances.dev = {
+                  directory = "/srv/dev";
+                  opencodeCfg = [
+                    { opencode.model = "sonnet"; }
+                  ];
+                };
+              };
+            }
+          ]) true
+        )).success;
+    in
+    assert !succeeded;
+    "PASS: opencodeCfg is rejected (option removed)";
+
+  test-config-defaults-merge =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            defaults.config.theme = "dark";
+            instances.dev = {
+              directory = "/srv/dev";
+              config.model = "sonnet";
+            };
+          };
+        }
+      ];
+    in
+    assert cfg.systemd.services ? "opencode-dev-setup";
+    "PASS: defaults.config merges with instance config";
+
+  test-config-isolation =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances = {
+              dev = {
+                directory = "/srv/dev";
+                config.model = "sonnet";
+              };
+              prod = {
+                directory = "/srv/prod";
+                config.model = "opus";
+              };
+            };
+          };
+        }
+      ];
+    in
+    assert cfg.systemd.services ? "opencode-dev-setup" && cfg.systemd.services ? "opencode-prod-setup";
+    "PASS: two instances with different config evaluate independently";
 in
 pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo "Running opencode NixOS module evaluation tests..."
@@ -214,6 +332,12 @@ pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo ${lib.escapeShellArg test-firewall-open}
   echo ${lib.escapeShellArg test-firewall-and-isolation-coexist}
   echo ${lib.escapeShellArg test-extra-groups}
+  echo ${lib.escapeShellArg test-config-submodule}
+  echo ${lib.escapeShellArg test-config-nested}
+  echo ${lib.escapeShellArg test-config-file-override}
+  echo ${lib.escapeShellArg test-opencodecfg-rejected}
+  echo ${lib.escapeShellArg test-config-defaults-merge}
+  echo ${lib.escapeShellArg test-config-isolation}
   echo "All eval tests passed."
   touch "$out"
 ''

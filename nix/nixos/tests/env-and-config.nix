@@ -39,7 +39,7 @@ pkgs.testers.nixosTest {
           environment.MY_VAR = "hello";
           environment.OVERRIDE_ME = "from-env";
           environmentFile = "/etc/test-opencode.env";
-          opencodeCfg = [ { opencode.theme = "dark"; } ];
+          config.theme = "dark";
         };
       };
 

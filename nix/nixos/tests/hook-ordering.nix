@@ -15,7 +15,7 @@ pkgs.testers.nixosTest {
         instances.hook-test = {
           directory = "/srv/hook-test";
           listen.port = 9191;
-          opencodeCfg = [ { opencode.theme = "dark"; } ];
+          config.theme = "dark";
           preInitScript = ''
             date +%s%N > /tmp/pre-stamp
           '';
