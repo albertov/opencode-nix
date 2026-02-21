@@ -1,5 +1,20 @@
 {
   "nodes": {
+    "flake-schemas": {
+      "locked": {
+        "lastModified": 1770913512,
+        "narHash": "sha256-jRC1qRoRCrMjDalVfUMHFlKSkkA2q0RZWTDW0LsquoA=",
+        "owner": "DeterminateSystems",
+        "repo": "flake-schemas",
+        "rev": "3c464b0e09cb44c6e073c41dd1d834980c3e0b24",
+        "type": "github"
+      },
+      "original": {
+        "owner": "DeterminateSystems",
+        "repo": "flake-schemas",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1771207753,
@@ -38,6 +53,7 @@
     },
     "root": {
       "inputs": {
+        "flake-schemas": "flake-schemas",
         "nixpkgs": "nixpkgs",
         "opencode": "opencode",
         "systems": "systems",

@@ -22,6 +22,8 @@ pkgs.testers.nixosTest {
     {
       imports = [ (import ../module.nix) ];
 
+      system.stateVersion = "24.11";
+
       environment.systemPackages = [ pkgs.python3 ];
 
       services.opencode = {

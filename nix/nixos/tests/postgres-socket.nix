@@ -21,6 +21,8 @@ pkgs.testers.nixosTest {
     {
       imports = [ ../module.nix ];
 
+      system.stateVersion = "24.11";
+
       environment.systemPackages = [ pkgs.python3 ];
 
       services.postgresql = {

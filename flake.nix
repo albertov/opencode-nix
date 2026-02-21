@@ -43,12 +43,15 @@
       nixosModules = {
         opencode = import ./nix/nixos/module.nix;
         default = import ./nix/nixos/module.nix;
+        example-chief-coding-assistant = import ./examples/chief-coding-assistant;
+        example-simple-coding-assistant = import ./examples/simple-coding-assistant;
       };
 
       checks = forAllSystems (
         pkgs:
         let
           lib = mkLib pkgs;
+          inherit (pkgs.stdenv.hostPlatform) system;
           overlayPkgs = pkgs.extend self.overlays.default;
           baseChecks = {
             empty-config = pkgs.runCommand "empty-config-test" { } ''
@@ -110,7 +113,7 @@
 
             overlay-wrapOpenCode = overlayPkgs.lib.opencode.wrapOpenCode {
               modules = [ ];
-              opencode = opencode.packages.${pkgs.system}.default;
+              opencode = opencode.packages.${system}.default;
             };
 
             nixos-module-eval = import ./nix/nixos/tests/eval-tests.nix { inherit pkgs; };
@@ -118,16 +121,18 @@
         in
         baseChecks
         // {
-          treefmt = treefmtEval.${pkgs.system}.config.build.check self;
+          treefmt = treefmtEval.${system}.config.build.check self;
         }
-        // nixpkgs.lib.optionalAttrs (pkgs.system == "x86_64-linux") (
-          import ./nix/nixos/tests { inherit pkgs; }
-        )
+        // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") (import ./nix/nixos/tests { inherit pkgs; })
       );
 
-      formatter = forAllSystems (pkgs: treefmtEval.${pkgs.system}.config.build.wrapper);
-
-      nixosTests = import ./nix/nixos/tests { pkgs = nixpkgs.legacyPackages.x86_64-linux; };
+      formatter = forAllSystems (
+        pkgs:
+        let
+          inherit (pkgs.stdenv.hostPlatform) system;
+        in
+        treefmtEval.${system}.config.build.wrapper
+      );
 
       apps.x86_64-linux.run-nixos-tests =
         let
@@ -135,21 +140,22 @@
         in
         {
           type = "app";
+          meta.description = "Build all NixOS VM tests for ocnix";
           program = "${
             pkgs.writeShellApplication {
               name = "run-nixos-tests";
               runtimeInputs = [ pkgs.nix ];
               text = ''
                 exec nix build \
-                  .#nixosTests.multi-instance \
-                  .#nixosTests.network-policy \
-                  .#nixosTests.sandbox-isolation \
-                  .#nixosTests.setup-idempotence \
-                    .#nixosTests.env-and-config \
-                    .#nixosTests.postgres-socket \
-                    .#nixosTests.simple-coding-assistant \
-                    .#nixosTests.hook-ordering \
-                    .#nixosTests.hook-failure \
+                  .#checks.x86_64-linux.multi-instance \
+                  .#checks.x86_64-linux.network-policy \
+                  .#checks.x86_64-linux.sandbox-isolation \
+                  .#checks.x86_64-linux.setup-idempotence \
+                  .#checks.x86_64-linux.env-and-config \
+                  .#checks.x86_64-linux.postgres-socket \
+                  .#checks.x86_64-linux.simple-coding-assistant \
+                  .#checks.x86_64-linux.hook-ordering \
+                  .#checks.x86_64-linux.hook-failure \
                     --no-warn-dirty \
                     -L \
                     "$@"
@@ -157,20 +163,5 @@
             }
           }/bin/run-nixos-tests";
         };
-
-      # Reusable example modules that can be imported into your own config.
-      examples = {
-        chief-coding-assistant =
-          let
-            pkgs = nixpkgs.legacyPackages.x86_64-linux.extend self.overlays.default;
-          in
-          import ./examples/chief-coding-assistant {
-            inherit pkgs;
-            opencode = opencode.packages.x86_64-linux.default;
-            inherit (pkgs.lib.opencode) mkOpenCodeConfig wrapOpenCode;
-          };
-
-        simple-coding-assistant = import ./examples/simple-coding-assistant;
-      };
     };
 }

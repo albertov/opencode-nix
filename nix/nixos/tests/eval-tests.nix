@@ -10,6 +10,7 @@ let
       modules = [
         ../module.nix
         {
+          system.stateVersion = "24.11";
           services.opencode.defaults.directory = "/var/lib/opencode/default-directory";
           services.opencode.defaults.package = pkgs.hello;
         }

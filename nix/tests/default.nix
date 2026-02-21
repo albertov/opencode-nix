@@ -461,13 +461,13 @@ let
     }
   ];
 
-  # Test 34b: primary=true with explicit mode → mode wins, primary preserved
+  # Test 34b: primary=true with explicit mode=primary → explicit mode preserved
   agentPrimaryModeConfig = mkOpenCodeConfig [
     {
       opencode.agent.worker = {
         model = "anthropic/claude-haiku-4-5";
         primary = true;
-        mode = "subagent";
+        mode = "primary";
       };
     }
   ];
@@ -908,8 +908,8 @@ pkgs.stdenvNoCC.mkDerivation {
     run_test "Test 34a: primary=true, no mode → mode=primary injected" "$agentPrimaryConfig"
     assert_contains "Test 34a" "$agentPrimaryConfig" '"mode":"primary"'
 
-    run_test "Test 34b: primary=true + mode=subagent → mode wins" "$agentPrimaryModeConfig"
-    assert_contains "Test 34b" "$agentPrimaryModeConfig" '"mode":"subagent"'
+    run_test "Test 34b: primary=true + mode=primary → explicit mode preserved" "$agentPrimaryModeConfig"
+    assert_contains "Test 34b" "$agentPrimaryModeConfig" '"mode":"primary"'
     assert_contains "Test 34b" "$agentPrimaryModeConfig" '"primary":true'
 
     # ── Tests 35–37: Primary/mode conflict validation ─────────────────

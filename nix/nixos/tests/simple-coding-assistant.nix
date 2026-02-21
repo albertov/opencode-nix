@@ -61,6 +61,8 @@ pkgs.testers.nixosTest {
         (import ../../../examples/simple-coding-assistant { inherit config lib pkgs; })
       ];
 
+      system.stateVersion = "24.11";
+
       environment.systemPackages = [ pkgs.python3 ];
 
       # Required: the module gates all output on this flag

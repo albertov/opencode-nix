@@ -7,12 +7,15 @@ pkgs.testers.nixosTest {
     {
       imports = [ (import ../module.nix) ];
 
+      system.stateVersion = "24.11";
+
       services.opencode = {
         enable = true;
         defaults.directory = "/var/lib/opencode/default-directory";
         instances.hook-test = {
           directory = "/srv/hook-test";
           listen.port = 9191;
+          opencodeCfg = [ { opencode.theme = "dark"; } ];
           preInitScript = ''
             date +%s%N > /tmp/pre-stamp
           '';
@@ -33,7 +36,8 @@ pkgs.testers.nixosTest {
 
     machine.succeed("test -f /tmp/pre-stamp")
     machine.succeed("test -f /tmp/post-stamp")
-    machine.succeed("test -L /var/lib/opencode/instance-state/hook-test/.config/opencode/opencode.json")
+    state_dir = "/var/lib/opencode/instance-state/hook-test"
+    machine.succeed(f"test -L {state_dir}/.config/opencode/opencode.json")
     machine.succeed("[ $(cat /tmp/pre-stamp) -le $(cat /tmp/post-stamp) ]")
 
     print("hook-ordering: PASS")
