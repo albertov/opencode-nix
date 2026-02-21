@@ -53,7 +53,7 @@ pkgs.testers.nixosTest {
     machine.wait_for_unit("opencode-pg-project.service")
     machine.wait_for_open_port(8787)
     machine.succeed("python3 ${healthcheckScript}")
-    machine.succeed("sudo -u opencode-pg-project psql -h /run/postgresql -d testdb -c 'SELECT 1' || true")
+    machine.succeed("sudo -u opencode-pg-project psql -h /run/postgresql -d testdb -c 'SELECT 1'")
 
     print("postgres-socket: PASS")
   '';
