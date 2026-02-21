@@ -62,6 +62,12 @@ nix eval .#overlays.default              # sanity-check overlay evaluates
 | `RED: <bead-ids>:` | Failing tests committed (TDD red phase) |
 | `FIX-BASELINE:` | Pre-existing lint/warning cleanup |
 
+## Task/spec sync checkpoint
+
+After completing implementation beads (GREEN commits), immediately update the corresponding `tasks.md` file in `openspec/changes/<change-name>/tasks.md`:
+- Mark completed tasks as `[x]` with evidence references (test file paths, commit hashes)
+- This sync MUST happen before verification (`/opsx:verify`) to avoid drift between implementation state and task tracking
+
 ## Test locations
 
 | Test | File | Runs in |
