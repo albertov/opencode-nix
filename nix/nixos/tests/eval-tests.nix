@@ -18,6 +18,17 @@ let
       ++ modules;
     }).config;
 
+  # Extract generated config JSON content from a NixOS eval result
+  extractConfigJson =
+    cfg: instanceName:
+    let
+      setupExec = cfg.systemd.services."opencode-${instanceName}-setup".serviceConfig.ExecStart;
+      setupScript = builtins.readFile setupExec;
+      matched = builtins.match ''.*ln -sf "([^"]+)".*opencode\.json.*'' setupScript;
+      configStorePath = builtins.elemAt matched 0;
+    in
+    builtins.readFile configStorePath;
+
   twoInstanceConfig = evalNixos [
     {
       services.opencode = {
@@ -216,9 +227,12 @@ let
           };
         }
       ];
+      json = extractConfigJson cfg "dev";
     in
     assert cfg.systemd.services ? "opencode-dev-setup";
-    "PASS: config submodule evaluates with model set";
+    assert builtins.match ''.*"model":.*"anthropic/claude-sonnet-4-20250514".*'' json != null;
+    assert builtins.match ''.*"\$schema":.*'' json != null;
+    "PASS: config submodule generates JSON with model and $schema";
 
   test-config-nested =
     let
@@ -228,14 +242,21 @@ let
             enable = true;
             instances.dev = {
               directory = "/srv/dev";
-              config.tui.theme = "dark";
+              config = {
+                theme = "dark";
+                tui.scroll_acceleration.enabled = true;
+              };
             };
           };
         }
       ];
+      json = extractConfigJson cfg "dev";
     in
     assert cfg.systemd.services ? "opencode-dev-setup";
-    "PASS: nested config option (tui.theme) evaluates";
+    assert builtins.match ''.*"theme":.*"dark".*'' json != null;
+    assert builtins.match ''.*"scroll_acceleration":.*"enabled":.*true.*'' json != null;
+    assert builtins.match ''.*"\$schema":.*'' json != null;
+    "PASS: nested config generates JSON with theme and $schema";
 
   test-config-file-override =
     let
@@ -255,6 +276,27 @@ let
     in
     assert builtins.match ".*test-opencode\\.json.*" setupScript != null;
     "PASS: explicit configFile appears in setup script";
+
+  test-config-configFile-warning =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.dev = {
+              directory = "/srv/dev";
+              config.model = "anthropic/claude-sonnet-4-20250514";
+              configFile = pkgs.writeText "test-opencode.json" "{}";
+            };
+          };
+        }
+      ];
+      hasWarning = builtins.any (
+        w: builtins.match ".*both 'configFile' and 'config' are set.*" w != null
+      ) cfg.warnings;
+    in
+    assert hasWarning;
+    "PASS: warning fires when both configFile and config are set";
 
   test-opencodecfg-rejected =
     let
@@ -335,6 +377,7 @@ pkgs.runCommand "opencode-module-eval-tests" { } ''
   echo ${lib.escapeShellArg test-config-submodule}
   echo ${lib.escapeShellArg test-config-nested}
   echo ${lib.escapeShellArg test-config-file-override}
+  echo ${lib.escapeShellArg test-config-configFile-warning}
   echo ${lib.escapeShellArg test-opencodecfg-rejected}
   echo ${lib.escapeShellArg test-config-defaults-merge}
   echo ${lib.escapeShellArg test-config-isolation}

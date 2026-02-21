@@ -287,6 +287,18 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    warnings = lib.flatten (
+      lib.mapAttrsToList (
+        name: _instance:
+        let
+          rawInstance = cfg.instances.${name};
+          strippedConfig = stripNulls rawInstance.config;
+        in
+        lib.optional (rawInstance.configFile != null && strippedConfig != { })
+          "services.opencode.instances.${name}: both 'configFile' and 'config' are set. 'configFile' takes precedence; 'config' values will be ignored."
+      ) (lib.filterAttrs (_: i: i.enable) mergedInstances)
+    );
+
     assertions = lib.flatten (
       lib.mapAttrsToList (name: instance: [
         {
