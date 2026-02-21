@@ -473,4 +473,4 @@ See the option files for full documentation:
 
 ## CI
 
-[![Check](https://github.com/your-org/opencode-nix/actions/workflows/check.yml/badge.svg)](https://github.com/your-org/opencode-nix/actions/workflows/check.yml)
+[![Check](https://github.com/albertov/opencode-nix/actions/workflows/check.yml/badge.svg)](https://github.com/albertov/opencode-nix/actions/workflows/check.yml)
