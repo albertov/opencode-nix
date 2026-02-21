@@ -27,6 +27,34 @@ Nix module system for generating [opencode](https://github.com/sst/opencode) con
 }
 ```
 
+## Overlay Usage
+
+The flake exposes `overlays.default` which extends `pkgs.lib` with opencode helpers:
+
+```nix
+# flake.nix (consumer)
+{
+  inputs.ocnix.url = "github:your-org/ocnix";
+  outputs = { self, nixpkgs, ocnix, ... }:
+    let
+      pkgs = nixpkgs.legacyPackages.x86_64-linux.extend ocnix.overlays.default;
+    in {
+      packages.x86_64-linux.my-opencode = pkgs.lib.opencode.wrapOpenCode {
+        name = "my-opencode";
+        modules = [ { theme = "dark"; } ];
+        opencode = <your-opencode-package>;
+      };
+    };
+}
+```
+
+Functions available via `pkgs.lib.opencode`:
+
+| Function | Description |
+|----------|-------------|
+| `mkOpenCodeConfig modules` | Generate opencode.json derivation from NixOS-style modules |
+| `wrapOpenCode { name, modules, opencode }` | Wrap opencode binary with generated config |
+
 ## Functions
 
 ### `lib.mkOpenCodeConfig modules`
