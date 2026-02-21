@@ -23,6 +23,11 @@
         opencode = opencode.packages.${final.system}.default;
       };
 
+      nixosModules = {
+        opencode = import ./nix/nixos/module.nix;
+        default = import ./nix/nixos/module.nix;
+      };
+
       checks = forAllSystems (pkgs:
         let
           lib = mkLib pkgs;
