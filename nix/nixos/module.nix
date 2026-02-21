@@ -174,6 +174,7 @@ let
   ) cfg.instances;
 
   enabledInstances = lib.filterAttrs (_: instance: instance.enable) mergedInstances;
+  isolatedInstances = lib.filterAttrs (_: instance: instance.enable && instance.networkIsolation.enable) mergedInstances;
 
   # Generate opencode.json for an instance using the existing lib machinery.
   mkInstanceConfig = name: instance:
@@ -219,20 +220,29 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = lib.flatten (lib.mapAttrsToList (name: instance: [
-      {
-        assertion = instance.directory != "";
-        message = "services.opencode.instances.${name}.directory must not be empty";
-      }
-      {
-        assertion = instance.listen.port >= 1 && instance.listen.port <= 65535;
-        message = "services.opencode.instances.${name}.listen.port must be between 1 and 65535 (got ${toString instance.listen.port})";
-      }
-      {
-        assertion = instance.stateDir != instance.directory;
-        message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
-      }
-    ]) (lib.filterAttrs (_: i: i.enable) mergedInstances));
+    assertions =
+      (lib.flatten (lib.mapAttrsToList (name: instance: [
+        {
+          assertion = instance.directory != "";
+          message = "services.opencode.instances.${name}.directory must not be empty";
+        }
+        {
+          assertion = instance.listen.port >= 1 && instance.listen.port <= 65535;
+          message = "services.opencode.instances.${name}.listen.port must be between 1 and 65535 (got ${toString instance.listen.port})";
+        }
+        {
+          assertion = instance.stateDir != instance.directory;
+          message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
+        }
+      ]) (lib.filterAttrs (_: i: i.enable) mergedInstances)))
+      ++ [
+        {
+          # NOTE: nftables is auto-enabled by this module for isolated instances,
+          # but nftables + legacy firewall can conflict on some NixOS versions.
+          assertion = !(isolatedInstances != {} && config.networking.firewall.enable);
+          message = "services.opencode networkIsolation requires networking.firewall.enable = false when isolation is active";
+        }
+      ];
 
     systemd.services = lib.mkMerge [
       (lib.mapAttrs' (name: instance:
@@ -266,6 +276,15 @@ in
                 ++ lib.optionals (instance.provider != null) [ "--provider" instance.provider ]
                 ++ instance.extraArgs
               );
+
+              ExecStartPre = lib.optionals instance.networkIsolation.enable [
+                (pkgs.writeShellScript "opencode-${name}-check-nftables" ''
+                  if ! ${pkgs.nftables}/bin/nft list ruleset | ${pkgs.gnugrep}/bin/grep -q "opencode-egress"; then
+                    echo "ERROR: opencode-${name}: nftables egress policy not active; refusing to start" >&2
+                    exit 1
+                  fi
+                '')
+              ];
 
               Restart = "on-failure";
               RestartSec = "5s";
@@ -347,6 +366,48 @@ in
         lib.optional instance.openFirewall instance.listen.port
       ) enabledInstances
     );
+
+    networking.nftables = lib.mkIf (isolatedInstances != {}) {
+      enable = true;
+      tables.opencode-egress = {
+        family = "inet";
+        content =
+          let
+            instanceRules = lib.mapAttrsToList (name: instance:
+              let
+                allowRules = lib.concatMapStringsSep "\n" (cidr:
+                  if lib.hasInfix ":" cidr then
+                    ''
+                      meta skuid "${instance.user}" ip6 daddr ${cidr} accept
+                    ''
+                  else
+                    ''
+                      meta skuid "${instance.user}" ip daddr ${cidr} accept
+                    ''
+                ) instance.networkIsolation.outboundAllowCidrs;
+              in
+              ''
+                # Instance: ${name} (user: ${instance.user})
+                # Outbound allow-list for ${name} enforced by UID match
+                ${allowRules}
+                # Log and drop other outbound from this user (rate limited)
+                meta skuid "${instance.user}" limit rate 5/minute log prefix "opencode-${name}-blocked: " drop
+                meta skuid "${instance.user}" drop
+              ''
+            ) isolatedInstances;
+          in
+          ''
+            chain output {
+              type filter hook output priority 0; policy accept;
+              # Allow loopback
+              oif lo accept
+              # Allow established/related connections
+              ct state established,related accept
+              ${lib.concatStringsSep "\n" instanceRules}
+            }
+          '';
+      };
+    };
 
     users.users = lib.mapAttrs' (_: instance:
       lib.nameValuePair instance.user {
