@@ -6,4 +6,5 @@
   setup-idempotence = import ./setup-idempotence.nix { inherit pkgs; };
   env-and-config = import ./env-and-config.nix { inherit pkgs; };
   postgres-socket = import ./postgres-socket.nix { inherit pkgs; };
+  simple-coding-assistant = import ./simple-coding-assistant.nix { inherit pkgs; };
 }

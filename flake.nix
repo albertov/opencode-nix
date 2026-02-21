@@ -114,6 +114,7 @@
                 .#nixosTests.setup-idempotence \
                 .#nixosTests.env-and-config \
                 .#nixosTests.postgres-socket \
+                .#nixosTests.simple-coding-assistant \
                 --no-warn-dirty \
                 -L \
                 "$@"
