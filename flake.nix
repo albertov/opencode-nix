@@ -26,6 +26,7 @@
       checks = forAllSystems (pkgs:
         let
           lib = mkLib pkgs;
+          overlayPkgs = pkgs.extend self.overlays.default;
         in
         {
           empty-config = pkgs.runCommand "empty-config-test" {} ''
@@ -77,6 +78,13 @@
             inherit pkgs opencode;
             inherit (pkgs) lib;
             mkOpenCodeConfig = lib.mkOpenCodeConfig;
+          };
+
+          overlay-mkOpenCodeConfig = overlayPkgs.lib.opencode.mkOpenCodeConfig [];
+
+          overlay-wrapOpenCode = overlayPkgs.lib.opencode.wrapOpenCode {
+            modules = [];
+            opencode = opencode.packages.${pkgs.system}.default;
           };
         });
 
