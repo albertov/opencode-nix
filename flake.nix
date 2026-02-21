@@ -93,9 +93,7 @@
           };
 
           nixos-module-eval = import ./nix/nixos/tests/eval-tests.nix { inherit pkgs; };
-        } // (if pkgs.stdenv.isLinux && pkgs.stdenv.hostPlatform.system == "x86_64-linux"
-              then import ./nix/nixos/tests { inherit pkgs; }
-              else {}));
+        });
 
       nixosTests = import ./nix/nixos/tests { pkgs = nixpkgs.legacyPackages.x86_64-linux; };
 

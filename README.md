@@ -165,7 +165,7 @@ nix build .#nixosTests.multi-instance -L
 nix build .#nixosTests.{multi-instance,sandbox-isolation,setup-idempotence,env-and-config,network-policy,postgres-socket}
 ```
 
-On CI (if KVM is available), VM tests are included automatically in `nix flake check` on `x86_64-linux`.
+VM tests are **not** included in `nix flake check` — run them individually with `nix build .#nixosTests.<name>`.
 
 ## Template Syntax: `{env:VAR}` and `{file:path}`
 
