@@ -3,6 +3,26 @@
 let
   inherit (lib) mkOption types;
 
+  oauthSubmodule = types.submodule {
+    options = {
+      clientId = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "OAuth client ID. If omitted, dynamic client registration (RFC 7591) is attempted.";
+      };
+      clientSecret = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "OAuth client secret, if required by the authorization server.";
+      };
+      scope = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "OAuth scopes to request during authorization.";
+      };
+    };
+  };
+
   mcpSubmodule = types.submodule {
     options = {
       type = mkOption {
@@ -44,6 +64,14 @@ let
           Values support '{env:VAR}' syntax for runtime secret injection.
         '';
         example = { Authorization = "Bearer {env:MCP_TOKEN}"; };
+      };
+      oauth = mkOption {
+        type = types.nullOr (types.either (types.enum [ false ]) oauthSubmodule);
+        default = null;
+        description = ''
+          OAuth authentication for remote MCP servers. Set to an attrset with
+          clientId/clientSecret/scope fields, or to false to disable OAuth auto-detection.
+        '';
       };
       # Shared fields
       enabled = mkOption {

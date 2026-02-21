@@ -573,6 +573,31 @@ let
     }
   ];
 
+  # Test 43: Remote MCP with OAuth config
+  mcpOauthConfig = mkOpenCodeConfig [
+    {
+      opencode.mcp.github = {
+        type = "remote";
+        url = "https://api.githubcopilot.com/mcp/";
+        oauth = {
+          clientId = "my-app";
+          scope = "read write";
+        };
+      };
+    }
+  ];
+
+  # Test 44: Remote MCP with OAuth disabled
+  mcpOauthDisabledConfig = mkOpenCodeConfig [
+    {
+      opencode.mcp.github = {
+        type = "remote";
+        url = "https://api.githubcopilot.com/mcp/";
+        oauth = false;
+      };
+    }
+  ];
+
   # Test 42: Invalid config Nix eval catches bad enum — Nix module type
   # checking rejects "bogus" at eval time, before Zod even runs.
   invalidNixEvalSucceeded = (builtins.tryEval (
@@ -611,7 +636,7 @@ pkgs.stdenvNoCC.mkDerivation {
     agentPrimaryFalseConfig agentModeOnlyConfig agentPrimaryFalseModeConfig
     fullParityConfig parityJsonCheck
     samplePortConfig sampleReferenceJson
-    fileTemplateConfig invalidNixEvalSucceeded
+    fileTemplateConfig mcpOauthConfig mcpOauthDisabledConfig invalidNixEvalSucceeded
     stripJsoncScript deepDiffScript;
 
   buildPhase = ''
@@ -886,6 +911,16 @@ pkgs.stdenvNoCC.mkDerivation {
       echo "  FAIL: Nix evaluation should have rejected logLevel='bogus'"
       FAIL=$((FAIL + 1))
     fi
+
+    # ── Tests 43–44: MCP OAuth support (ocnix-xtd.5.1) ──────────────────
+
+    run_test "Test 43: Remote MCP with OAuth config" "$mcpOauthConfig"
+    assert_contains "Test 43" "$mcpOauthConfig" '"oauth"'
+    assert_contains "Test 43" "$mcpOauthConfig" '"clientId":"my-app"'
+    assert_contains "Test 43" "$mcpOauthConfig" '"scope":"read write"'
+
+    run_test "Test 44: Remote MCP with OAuth disabled (false)" "$mcpOauthDisabledConfig"
+    assert_contains "Test 44" "$mcpOauthDisabledConfig" '"oauth":false'
 
     echo ""
     echo "All tests passed! ($PASS validations)"
