@@ -158,11 +158,18 @@ nix build .#nixosTests.postgres-socket
 These tests use QEMU VMs and require KVM. On a NixOS host:
 
 ```bash
-# Run with verbose output
+# Run a single test with verbose output
 nix build .#nixosTests.multi-instance -L
 
-# Run all VM tests (builds in parallel)
-nix build .#nixosTests.{multi-instance,sandbox-isolation,setup-idempotence,env-and-config,network-policy,postgres-socket}
+# Run all VM tests in parallel with verbose output
+nix build \
+  .#nixosTests.multi-instance \
+  .#nixosTests.network-policy \
+  .#nixosTests.sandbox-isolation \
+  .#nixosTests.setup-idempotence \
+  .#nixosTests.env-and-config \
+  .#nixosTests.postgres-socket \
+  -L
 ```
 
 VM tests are **not** included in `nix flake check` — run them individually with `nix build .#nixosTests.<name>`.
