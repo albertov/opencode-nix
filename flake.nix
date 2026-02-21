@@ -4,39 +4,31 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     opencode.url = "github:anomalyco/opencode";
+    opencode.inputs.nixpkgs.follows = "nixpkgs";
+    systems.url = "github:nix-systems/default";
   };
 
-  outputs = { self, nixpkgs, opencode }:
+  outputs = { self, nixpkgs, opencode, systems }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
+      eachSystem = nixpkgs.lib.genAttrs (import systems);
+      forAllSystems = f: eachSystem (system: f nixpkgs.legacyPackages.${system});
 
       mkLib = pkgs: import ./nix/config/lib.nix { inherit pkgs; lib = pkgs.lib; };
     in
     {
-      lib = let
-        defaultOpencode = opencode.packages.x86_64-linux.default;
-      in {
-        mkOpenCodeConfig = modules:
-          let
-            pkgs = nixpkgs.legacyPackages.x86_64-linux;
-          in
-          (mkLib pkgs).mkOpenCodeConfig modules;
-
-        wrapOpenCode = { name ? "opencode", modules, opencode ? defaultOpencode }:
-          let
-            pkgs = nixpkgs.legacyPackages.x86_64-linux;
-          in
-          (mkLib pkgs).wrapOpenCode { inherit name modules opencode; };
+      overlays.default = final: prev: {
+        lib = prev.lib // {
+          opencode = mkLib final;
+        };
+        opencode = opencode.packages.${final.system}.default;
       };
 
-      checks = forAllSystems (system:
+      checks = forAllSystems (pkgs:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
           lib = mkLib pkgs;
         in
         {
-          empty-config = pkgs.runCommandNoCC "empty-config-test" {} ''
+          empty-config = pkgs.runCommand "empty-config-test" {} ''
             config=${lib.mkOpenCodeConfig []}
             content=$(cat "$config")
             echo "Generated config: $content"
@@ -90,7 +82,15 @@
 
       # Reusable example modules that can be imported into your own config.
       examples = {
-        chief-coding-assistant = import ./examples/chief-coding-assistant;
+        chief-coding-assistant =
+          let
+            pkgs = nixpkgs.legacyPackages.x86_64-linux.extend self.overlays.default;
+          in
+          import ./examples/chief-coding-assistant {
+            inherit pkgs;
+            opencode = opencode.packages.x86_64-linux.default;
+            inherit (pkgs.lib.opencode) mkOpenCodeConfig wrapOpenCode;
+          };
       };
     };
 }

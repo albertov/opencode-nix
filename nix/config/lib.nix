@@ -58,7 +58,15 @@ let
     in
     pkgs.writeText "opencode.json" configJSON;
 
-  wrapOpenCode = { name ? "opencode", modules, opencode }:
+  wrapOpenCode = {
+    name ? "opencode",
+    modules,
+    opencode ?
+      if pkgs ? opencode then
+        pkgs.opencode
+      else
+        throw "wrapOpenCode: 'opencode' argument not provided and pkgs.opencode is unavailable"
+  }:
     let
       configDrv = mkOpenCodeConfig modules;
     in
