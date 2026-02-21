@@ -219,6 +219,21 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = lib.flatten (lib.mapAttrsToList (name: instance: [
+      {
+        assertion = instance.directory != "";
+        message = "services.opencode.instances.${name}.directory must not be empty";
+      }
+      {
+        assertion = instance.listen.port >= 1 && instance.listen.port <= 65535;
+        message = "services.opencode.instances.${name}.listen.port must be between 1 and 65535 (got ${toString instance.listen.port})";
+      }
+      {
+        assertion = instance.stateDir != instance.directory;
+        message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
+      }
+    ]) (lib.filterAttrs (_: i: i.enable) mergedInstances));
+
     systemd.services = lib.mkMerge [
       (lib.mapAttrs' (name: instance:
         lib.nameValuePair "opencode-${name}" {
@@ -261,6 +276,7 @@ in
               ProtectHome = true;
               ReadWritePaths = [ instance.directory instance.stateDir ] ++ instance.sandbox.readWritePaths;
               ReadOnlyPaths = [ "/nix/store" ] ++ instance.sandbox.readOnlyPaths;
+              BindReadOnlyPaths = instance.sandbox.unixSockets.allow;
 
               # Process isolation
               PrivateMounts = true;
