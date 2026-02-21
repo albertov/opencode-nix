@@ -40,7 +40,7 @@ When outbound network isolation is enabled, blocked outbound connection attempts
 #### Scenario: Blocked outbound attempt is logged
 - **WHEN** `networkIsolation.enable = true` and an instance attempts outbound traffic to a non-allowlisted destination
 - **THEN** the attempt is denied
-- **AND** a log record is emitted containing the instance identity and attempted destination.
+- **AND** a log record is emitted with an instance-identifying prefix (for example `opencode-<name>-blocked`) and kernel network metadata including destination details.
 
 #### Scenario: Log volume is controlled
 - **WHEN** repeated blocked outbound attempts occur
@@ -50,6 +50,10 @@ When outbound network isolation is enabled, blocked outbound connection attempts
 
 The system MUST fail safely when outbound network isolation is enabled but required enforcement backend is unavailable.
 
-#### Scenario: Isolation enabled without usable backend
-- **WHEN** `networkIsolation.enable = true` and policy backend cannot be activated
-- **THEN** service activation fails with an actionable error.
+#### Scenario: Isolation enabled without nftables backend
+- **WHEN** `networkIsolation.enable = true` and `networking.nftables.enable = false`
+- **THEN** NixOS evaluation fails with an actionable assertion error.
+
+#### Scenario: Isolation enabled while legacy firewall backend is active
+- **WHEN** any instance enables `networkIsolation.enable = true` and `networking.firewall.enable = true`
+- **THEN** NixOS evaluation fails with an actionable assertion error describing the nftables requirement.

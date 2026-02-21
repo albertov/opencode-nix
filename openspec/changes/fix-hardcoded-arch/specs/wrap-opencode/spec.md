@@ -2,7 +2,7 @@
 
 ### Requirement: Function signature
 
-`pkgs.lib.opencode.wrapOpenCode` accepts an attrset with `name`, `modules`, and optional `opencode` package.
+`pkgs.lib.opencode.wrapOpenCode` MUST accept an attrset with `name`, `modules`, and optional `opencode` package.
 
 When `opencode` is omitted, the default package MUST resolve from the active overlay package set for that system, and MUST NOT be hardcoded to `x86_64-linux`.
 
@@ -10,6 +10,12 @@ When `opencode` is omitted, the default package MUST resolve from the active ove
 
 - **WHEN** nixpkgs is instantiated with this flake's overlay
 - **THEN** `pkgs.lib.opencode.wrapOpenCode` exists and is callable.
+
+#### Scenario: Overlay namespace is canonical helper interface
+
+- **WHEN** consumers use helper functions from this flake
+- **THEN** the supported entrypoint is `pkgs.lib.opencode.*` via overlayed nixpkgs
+- **AND** consumers are not required to use flake-level helper entrypoints.
 
 #### Scenario: Basic invocation
 
@@ -42,7 +48,7 @@ pkgs.lib.opencode.wrapOpenCode {
 
 ### Requirement: Binary wrapping mechanism
 
-Uses standard Nix wrapping tools.
+The wrapper implementation MUST use standard Nix wrapping tools.
 
 #### Scenario: symlinkJoin + makeWrapper
 

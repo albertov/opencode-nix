@@ -9,6 +9,12 @@
 - **WHEN** nixpkgs is instantiated with this flake's overlay
 - **THEN** `pkgs.lib.opencode.mkOpenCodeConfig` exists and is callable.
 
+#### Scenario: Overlay namespace is canonical helper interface
+
+- **WHEN** consumers use helper functions from this flake
+- **THEN** the supported entrypoint is `pkgs.lib.opencode.*` via overlayed nixpkgs
+- **AND** consumers are not required to use flake-level helper entrypoints.
+
 #### Scenario: Basic invocation
 
 - **WHEN** called as:

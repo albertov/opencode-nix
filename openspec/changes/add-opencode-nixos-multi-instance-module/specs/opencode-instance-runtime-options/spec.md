@@ -6,7 +6,8 @@ The system MUST expose typed NixOS options for headless opencode runtime flags t
 
 #### Scenario: Service options map to command arguments
 - **WHEN** an instance sets supported runtime options (for example listen address, listen port, log level, provider/model options)
-- **THEN** the generated `ExecStart` command includes the corresponding CLI arguments deterministically.
+- **THEN** the generated `ExecStart` command includes the corresponding CLI arguments deterministically
+- **AND** uses headless server invocation (`opencode serve`) with explicit `--port` and `--hostname` projection.
 
 ### Requirement: Safe defaults for unattended service mode
 
@@ -16,17 +17,22 @@ Each instance MUST have secure and practical defaults for headless operation whe
 - **WHEN** an instance sets only `directory`
 - **THEN** defaults are applied for remaining required runtime options and the instance starts without interactive input.
 
-### Requirement: Validation of unsupported or conflicting flags
+### Requirement: Journald-visible service logs
 
-The system MUST reject invalid, unsupported, or conflicting runtime option combinations at evaluation time.
+Each instance MUST run opencode with log emission to stderr so unit logs are visible through journald for debugging and test assertions.
+
+#### Scenario: ExecStart enables stderr log streaming
+- **WHEN** an instance service starts
+- **THEN** generated `ExecStart` includes `--print-logs`
+- **AND** opencode logs are observable via `journalctl -u opencode-<instance>`.
+
+### Requirement: Validation of typed values
+
+The system MUST reject invalid typed runtime option values at evaluation time.
 
 #### Scenario: Invalid option value fails evaluation
 - **WHEN** an instance sets an out-of-range or enum-invalid value
 - **THEN** NixOS evaluation fails with an actionable error message.
-
-#### Scenario: Interactive-only flag in service mode
-- **WHEN** an instance enables a CLI option that requires interactive TTY behavior
-- **THEN** evaluation fails and explains that the option is unsupported in headless mode.
 
 ### Requirement: Escape hatch for advanced flags
 

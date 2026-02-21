@@ -17,14 +17,14 @@ The typed config module MUST be consumable by the NixOS opencode service module 
 - **WHEN** an instance starts with default HOME/stateDir behavior
 - **THEN** generated config is exposed at `$HOME/.config/opencode/opencode.json` via symlink to the generated artifact.
 
-### Requirement: Declarative config-tree extensibility
+### Requirement: Declarative extension integration
 
-Service integration MUST allow declarative projection of additional opencode config-tree content (for example skills/agents) under `$HOME/.config/opencode/`.
+Service integration MUST allow declarative extension content (for example skills) to be referenced through generated opencode configuration without replacing module-managed HOME layout.
 
-#### Scenario: Declarative extensions coexist with generated config symlink
-- **WHEN** operator defines additional config-tree files under `$HOME/.config/opencode/`
-- **THEN** those files are present for runtime use
-- **AND** generated `opencode.json` symlink remains intact.
+#### Scenario: Declarative extension references coexist with generated config symlink
+- **WHEN** operator declares extension paths (for example `opencode.skills.paths`) in instance config modules
+- **THEN** generated `opencode.json` contains those extension references for runtime use
+- **AND** generated `opencode.json` symlink at `$HOME/.config/opencode/opencode.json` remains intact.
 
 ### Requirement: Multi-instance config generation isolation
 
