@@ -3,7 +3,7 @@
 ## Repo layout
 
 ```
-flake.nix                          # outputs: overlays.default, nixosModules, checks, nixosTests, examples
+flake.nix                          # outputs: overlays.default, nixosModules, checks, apps, legacyPackages
 nix/config/lib.nix                 # { mkOpenCodeConfig, wrapOpenCode } — core config helpers
 nix/config/default.nix             # module system root (imports options/*)
 nix/config/options/                # typed opencode.json option files
@@ -22,7 +22,7 @@ examples/                          # importable example module configs
 | `pkgs.lib.opencode.wrapOpenCode { name, modules, opencode }` | Wraps opencode binary with baked-in config via `OPENCODE_CONFIG` |
 | `nixosModules.opencode` | NixOS module: `services.opencode.instances.<name>` |
 | `checks.*` | `nix flake check` — runs on all systems (+ VM tests on x86_64-linux) |
-| `nixosTests.*` | `nix build .#nixosTests.<name>` — individual VM tests |
+| `checks.x86_64-linux.<name>` | Individual VM test derivations (`nix build .#checks.x86_64-linux.<name>` or `nix run .#checks.x86_64-linux.<name>.driver`) |
 
 ## Hard invariants — never violate
 
@@ -44,13 +44,14 @@ examples/                          # importable example module configs
 
 ```bash
 nix flake check                          # all eval + VM tests on x86_64-linux
-nix build .#nixosTests.<name>            # individual VM test (requires KVM)
+nix build .#checks.x86_64-linux.<name>   # individual VM test derivation (requires KVM)
+nix run .#checks.x86_64-linux.<name>.driver   # run VM test driver directly
 nix eval .#overlays.default              # sanity-check overlay evaluates
 ```
 
 - **Mandatory GREEN gate** — run `nix flake check` immediately before any `GREEN:` commit.
 - **No exceptions** — if `nix flake check` fails, do not create a `GREEN:` commit.
-- **Mandatory test wiring** — all tests (Nix eval/unit checks and NixOS VM integration tests) MUST be wired into `checks.*` so they run via `nix flake check`; do not leave tests only runnable through ad-hoc `nix build .#nixosTests.<name>` commands.
+- **Mandatory test wiring** — all tests (Nix eval/unit checks and NixOS VM integration tests) MUST be wired into `checks.*` so they run via `nix flake check`; do not leave tests only runnable through ad-hoc commands outside `checks.*`.
 
 ## Commit conventions
 
@@ -67,7 +68,7 @@ nix eval .#overlays.default              # sanity-check overlay evaluates
 | Empty config | `checks.empty-config` | `nix flake check` |
 | Zod schema | `nix/tests/default.nix` | `nix flake check` |
 | Module eval | `nix/nixos/tests/eval-tests.nix` | `nix flake check` |
-| VM tests | `nix/nixos/tests/*.nix` | `nix build .#nixosTests.*` / `nix flake check` on x86_64-linux |
+| VM tests | `nix/nixos/tests/*.nix` | `nix build .#checks.x86_64-linux.<name>` / `nix run .#checks.x86_64-linux.<name>.driver` / `nix flake check` on x86_64-linux |
 
 ## Key module options (nix/nixos/module.nix)
 

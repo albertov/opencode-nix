@@ -214,38 +214,41 @@ Build and run individual VM tests:
 
 ```bash
 # Multi-instance lifecycle
-nix build .#nixosTests.multi-instance
+nix build .#checks.x86_64-linux.multi-instance
 
 # Filesystem sandbox and cross-instance isolation
-nix build .#nixosTests.sandbox-isolation
+nix build .#checks.x86_64-linux.sandbox-isolation
 
 # Setup service idempotence + lifecycle hooks
-nix build .#nixosTests.setup-idempotence
+nix build .#checks.x86_64-linux.setup-idempotence
 
 # Environment variables, environmentFile, config symlink
-nix build .#nixosTests.env-and-config
+nix build .#checks.x86_64-linux.env-and-config
 
 # Outbound network policy and blocked-attempt logging
-nix build .#nixosTests.network-policy
+nix build .#checks.x86_64-linux.network-policy
 
 # Unix socket allowlist with PostgreSQL (demonstrates sandbox.unixSockets.allow)
-nix build .#nixosTests.postgres-socket
+nix build .#checks.x86_64-linux.postgres-socket
 ```
 
 These tests use QEMU VMs and require KVM. On a NixOS host:
 
 ```bash
 # Run a single test with verbose output
-nix build .#nixosTests.multi-instance -L
+nix build .#checks.x86_64-linux.multi-instance -L
+
+# Run a test interactively via the NixOS test driver
+nix run .#checks.x86_64-linux.postgres-socket.driver
 
 # Run all VM tests in parallel with verbose output
 nix build \
-  .#nixosTests.multi-instance \
-  .#nixosTests.network-policy \
-  .#nixosTests.sandbox-isolation \
-  .#nixosTests.setup-idempotence \
-  .#nixosTests.env-and-config \
-  .#nixosTests.postgres-socket \
+  .#checks.x86_64-linux.multi-instance \
+  .#checks.x86_64-linux.network-policy \
+  .#checks.x86_64-linux.sandbox-isolation \
+  .#checks.x86_64-linux.setup-idempotence \
+  .#checks.x86_64-linux.env-and-config \
+  .#checks.x86_64-linux.postgres-socket \
   -L
 ```
 
