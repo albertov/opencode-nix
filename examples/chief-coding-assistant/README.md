@@ -1,6 +1,11 @@
 # Example: Chief Coding Assistant
 
-A multi-provider AI coding assistant configuration featuring:
+A production-grade opencode configuration with multiple AI providers, a roster
+of specialized agents, and deny-by-default permissions. This is a real working
+setup — use it as a reference for building your own multi-agent workflow or
+import it directly and override what you need.
+
+Features:
 - **Deny-by-default permissions** with fine-grained tool access
 - **Multiple AI providers**: Modal AI, Ollama (local), Amazon Bedrock
 - **Primary agents**: `chief` (orchestrator), `bird` (drinking-bird loop), `plan` (planning), `invoicer` (invoice processing)
@@ -34,19 +39,23 @@ cat result  # opencode.json
 
 ```nix
 {
-  inputs.opencode-nix.url = "github:your-org/opencode-nix";
+  inputs.ocnix.url = "github:jmatsushita/ocnix";
 
-  outputs = { opencode-nix, ... }: {
-    packages.x86_64-linux.my-opencode =
-      opencode-nix.lib.wrapOpenCode {
-        name = "opencode";
-        opencode = pkgs.opencode;
-        modules = [
-          opencode-nix.examples.chief-coding-assistant
-          # Your local overrides:
-          { opencode.model = "anthropic/claude-opus-4-5"; }
-        ];
-      };
+  outputs = { self, nixpkgs, ocnix, ... }:
+  let
+    pkgs = import nixpkgs {
+      system = "x86_64-linux";
+      overlays = [ ocnix.overlays.default ];
+    };
+  in {
+    packages.x86_64-linux.my-opencode = pkgs.lib.opencode.wrapOpenCode {
+      name = "opencode";
+      modules = [
+        ocnix.examples.chief-coding-assistant
+        # Your local overrides:
+        { opencode.model = "anthropic/claude-opus-4-5"; }
+      ];
+    };
   };
 }
 ```
@@ -55,8 +64,8 @@ cat result  # opencode.json
 
 ```nix
 # Override the primary model for a specific project
-mkOpenCodeConfig [
-  (import "${opencode-nix}/examples/chief-coding-assistant")
+pkgs.lib.opencode.mkOpenCodeConfig [
+  (import "${ocnix}/examples/chief-coding-assistant")
   { opencode.model = "openai/o3"; }
 ]
 ```

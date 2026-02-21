@@ -1,6 +1,118 @@
 # opencode-nix
 
-Nix module system for generating [opencode](https://github.com/sst/opencode) config files (`opencode.json`).
+Nix flake for [opencode](https://github.com/sst/opencode) — typed configuration generation and NixOS service management.
+
+## What This Does
+
+opencode-nix provides two things:
+
+**Typed configuration generation.** opencode's `opencode.json` config file supports providers, MCP servers, agents, permissions, keybinds, and more. Managing this by hand across machines or team members gets unwieldy. This flake exposes the full opencode config schema as Nix module options with types, defaults, and descriptions. You can split config into composable modules (team base, MCP tooling, personal overrides), merge them with the standard Nix module system, and produce a validated `opencode.json` as a store derivation. Null values are stripped automatically; `$schema` is injected. The result can be used standalone (`mkOpenCodeConfig`) or baked into a wrapped binary (`wrapOpenCode`) that carries its config via environment variable.
+
+**NixOS multi-instance service module.** For running opencode as a persistent server — one or many instances on the same host, each bound to a different project directory. Each instance gets its own systemd service, dedicated user, state directory, and config. Instances are declared with `services.opencode.instances.<name>` and support per-instance typed config (the same module options from above), secrets via `environmentFile`, filesystem sandboxing (`readWritePaths`, `readOnlyPaths`, `unixSockets.allow`), and optional nftables-based outbound network isolation. You can interact with running instances through the web UI or attach the opencode TUI to a server from any terminal. Useful for project-specific coding assistants, headless agent farms, or shared instances that team members connect to on demand.
+
+Both use cases share the same typed option definitions under `nix/config/options/`.
+
+## Examples
+
+The `examples/` directory contains importable NixOS modules you can use directly or as starting points:
+
+| Example | Use Case | What It Shows |
+|---------|----------|---------------|
+| [`simple-coding-assistant`](examples/simple-coding-assistant/) | Single project assistant | Minimal NixOS service instance with 4 subagents, runtime-loaded skills, and `mkOpenCodeConfig` module composition |
+| [`chief-coding-assistant`](examples/chief-coding-assistant/) | Multi-provider agent farm | Deny-by-default permissions, 3 AI providers, 15+ agents (orchestrator, language experts, reviewers, explorers), MCP tooling, and environment-variable-driven model selection |
+
+Both examples can be imported directly into a NixOS configuration:
+
+```nix
+{
+  imports = [
+    inputs.ocnix.nixosModules.opencode
+    inputs.ocnix.examples.simple-coding-assistant   # or .chief-coding-assistant
+  ];
+}
+```
+
+Or used standalone to build `opencode.json`:
+
+```nix
+pkgs.lib.opencode.mkOpenCodeConfig [
+  (import "${ocnix}/examples/chief-coding-assistant")
+  { opencode.model = "anthropic/claude-opus-4-5"; }  # local overrides
+]
+```
+
+Or wrapped into a self-contained binary with `wrapOpenCode` — agents, skills, MCP tools, plugins, and model selection all baked in:
+
+```nix
+pkgs.lib.opencode.wrapOpenCode {
+  name = "chief";
+  opencode = opencode.packages.${system}.default;
+  modules = [
+    (import "${ocnix}/examples/chief-coding-assistant")
+    {
+      opencode.agents.rust-expert = {
+        model = "anthropic/claude-opus-4-5";
+        instructions = builtins.readFile ./agents/rust-expert.md;
+      };
+      opencode.skills.custom-deploy = {
+        instructions = builtins.readFile ./skills/deploy.md;
+      };
+      opencode.mcp.servers.github = {
+        command = "${pkgs.mcp-github}/bin/mcp-github";
+        args = [ "--repo" "myorg/myrepo" ];
+      };
+    }
+  ];
+}
+```
+
+Running `chief` launches opencode with all configuration resolved at build time — no dotfiles to sync, no manual setup. The Nix store provides hermeticity (every dependency is content-addressed, so the binary behaves identically regardless of the host environment) and reproducibility (the same flake inputs always produce the same wrapped binary, bit-for-bit). Teams can pin a flake revision and know every member is running an identical agent setup.
+
+### Self-contained flake
+
+A minimal `flake.nix` that produces a ready-to-run opencode with a custom agent and MCP tool:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    ocnix.url = "github:your-org/ocnix";
+    opencode.url = "github:anomalyco/opencode";
+  };
+
+  outputs = { nixpkgs, ocnix, opencode, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system}.extend ocnix.overlays.default;
+    in {
+      packages.${system}.default = pkgs.lib.opencode.wrapOpenCode {
+        name = "my-opencode";
+        opencode = opencode.packages.${system}.default;
+        modules = [{
+          opencode.model = "anthropic/claude-sonnet-4-5";
+          opencode.agents.reviewer = {
+            model = "anthropic/claude-opus-4-5";
+            instructions = ''
+              You are a code reviewer. Focus on correctness, security, and maintainability.
+            '';
+          };
+          opencode.mcp.servers.github = {
+            command = "''${pkgs.mcp-github}/bin/mcp-github";
+          };
+        }];
+      };
+    };
+}
+```
+
+Anyone with Nix can run it directly from the repo — no clone, no install:
+
+```bash
+nix run github:your-org/your-repo
+```
+
+The binary, its config, and all MCP tool dependencies are fetched, built, and cached in one step. The same command produces the same result on any machine.
 
 ## Quick Start
 

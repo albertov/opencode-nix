@@ -1,5 +1,9 @@
 # Example: Simple Coding Assistant (NixOS Module)
 
+A starting point for running a single opencode instance as a NixOS service.
+Use this to understand the basic service pattern before scaling to the
+multi-provider setup in `chief-coding-assistant/`.
+
 This example shows a minimal **headless coding assistant** using the NixOS
 service module pattern: `services.opencode.instances.<name>`.
 
