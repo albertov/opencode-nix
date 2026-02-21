@@ -33,13 +33,13 @@
 
 ### Tasks
 
-- [ ] In `nix/config/lib.nix`, add `mkOpenCodeConfigFromAttrs` (or similar) that takes a raw config attrset → normalizes → cleans → injects `$schema` → `writeText`; shares pipeline with `mkOpenCodeConfig`
-- [ ] In `nix/nixos/module.nix`, define `config` option as a submodule type importing `nix/config/default.nix`, with adapter to strip `opencode.` prefix so users write `config.model` not `config.opencode.model`
-- [ ] In `nix/nixos/module.nix`, define `configFile` option as `types.path` with default that evaluates `config` through the new config-from-attrs pipeline
-- [ ] Remove `opencodeCfg` option entirely from `instanceOpts` (unreleased, no deprecation needed)
-- [ ] Update `mkInstanceConfig` to use `configFile` directly
-- [ ] Ensure `services.opencode.defaults` merges `config` values properly with per-instance `config` via NixOS module merge semantics
-- [ ] Verify `nix flake check` passes — instances with `config` produce correct JSON, `configFile` default works
+- [x] In `nix/config/lib.nix`, add `mkOpenCodeConfigFromAttrs` (or similar) that takes a raw config attrset → normalizes → cleans → injects `$schema` → `writeText`; shares pipeline with `mkOpenCodeConfig` (evidence: `nix/config/lib.nix`, commit `278466c`)
+- [x] In `nix/nixos/module.nix`, define `config` option as a submodule type importing `nix/config/default.nix`, with adapter to strip `opencode.` prefix so users write `config.model` not `config.opencode.model` (evidence: `nix/nixos/module.nix`, `nix/config/submodule.nix` (new), commit `278466c`)
+- [x] In `nix/nixos/module.nix`, define `configFile` option as `types.path` with default that evaluates `config` through the new config-from-attrs pipeline (evidence: `nix/nixos/module.nix`, commit `278466c`)
+- [x] Remove `opencodeCfg` option entirely from `instanceOpts` (unreleased, no deprecation needed) (evidence: `nix/nixos/module.nix`, commit `278466c`)
+- [x] Update `mkInstanceConfig` to use `configFile` directly (evidence: replaced with `resolveConfigFile`, `nix/nixos/module.nix`, commit `278466c`)
+- [x] Ensure `services.opencode.defaults` merges `config` values properly with per-instance `config` via NixOS module merge semantics (evidence: `nix/nixos/tests/eval-tests.nix` test-config-defaults-merge, commit `278466c`)
+- [x] Verify `nix flake check` passes — instances with `config` produce correct JSON, `configFile` default works (evidence: all 18 checks pass, commit `278466c`)
 
 ---
 
@@ -58,9 +58,9 @@
 
 ### Tasks
 
-- [ ] Replace `opencodeCfg` with `config` in `examples/simple-coding-assistant/default.nix`
-- [ ] Replace `opencodeCfg` with `config` in VM test configs (`env-and-config.nix`, `hook-ordering.nix`)
-- [ ] Add eval tests: config submodule produces correct JSON, configFile override works
-- [ ] Update `nix/nixos/README.md` options table and usage examples
-- [ ] Update `AGENTS.md` key module options list to replace `opencodeCfg` with `config`/`configFile`
-- [ ] Final `nix flake check` — all eval tests, schema validation, and VM tests pass
+- [x] Replace `opencodeCfg` with `config` in `examples/simple-coding-assistant/default.nix` (evidence: commit `278466c` (done in bead 2))
+- [x] Replace `opencodeCfg` with `config` in VM test configs (`env-and-config.nix`, `hook-ordering.nix`) (evidence: commit `278466c` (done in bead 2))
+- [x] Add eval tests: config submodule produces correct JSON, configFile override works (evidence: `nix/nixos/tests/eval-tests.nix`, 6 new tests, commit `278466c` (done in bead 2))
+- [x] Update `nix/nixos/README.md` options table and usage examples (evidence: commit `745df65`)
+- [x] Update `AGENTS.md` key module options list to replace `opencodeCfg` with `config`/`configFile` (evidence: commit `745df65`)
+- [x] Final `nix flake check` — all eval tests, schema validation, and VM tests pass (evidence: passes, commit `745df65`)
