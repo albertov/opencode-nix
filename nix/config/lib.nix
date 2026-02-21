@@ -26,8 +26,14 @@ let
   #   3. both null       → cleanConfig will strip them; no action needed.
   normalizeAgent = agent:
     if agent ? mode && agent.mode != null then
-      # mode is authoritative — preserve both fields
-      agent
+      # mode is authoritative — preserve both fields.
+      # Warn when primary=true conflicts with a non-primary mode.
+      let
+        warned = if agent ? primary && agent.primary == true && agent.mode != "primary" then
+          builtins.trace "opencode-nix: warning: agent has primary=true but mode=\"${agent.mode}\"; mode takes precedence" agent
+        else
+          agent;
+      in warned
     else if agent ? primary && agent.primary == true then
       # primary=true with no mode → inject mode="primary" for runtime clarity
       agent // { mode = "primary"; }

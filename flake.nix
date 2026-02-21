@@ -14,14 +14,16 @@
       mkLib = pkgs: import ./nix/config/lib.nix { inherit pkgs; lib = pkgs.lib; };
     in
     {
-      lib = {
+      lib = let
+        defaultOpencode = opencode.packages.x86_64-linux.default;
+      in {
         mkOpenCodeConfig = modules:
           let
             pkgs = nixpkgs.legacyPackages.x86_64-linux;
           in
           (mkLib pkgs).mkOpenCodeConfig modules;
 
-        wrapOpenCode = { name ? "opencode", modules, opencode }:
+        wrapOpenCode = { name ? "opencode", modules, opencode ? defaultOpencode }:
           let
             pkgs = nixpkgs.legacyPackages.x86_64-linux;
           in
