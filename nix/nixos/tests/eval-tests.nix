@@ -1,0 +1,140 @@
+{ pkgs }:
+let
+  lib = pkgs.lib;
+
+  evalNixos = modules:
+    (import "${pkgs.path}/nixos/lib/eval-config.nix" {
+      inherit pkgs;
+      system = pkgs.stdenv.hostPlatform.system;
+      modules = [
+        ../module.nix
+        {
+          services.opencode.defaults.directory = "/var/lib/opencode/default-directory";
+          services.opencode.defaults.package = pkgs.hello;
+        }
+      ] ++ modules;
+    }).config;
+
+  twoInstanceConfig = evalNixos [
+    {
+      services.opencode = {
+        enable = true;
+        instances = {
+          project-a = {
+            directory = "/srv/project-a";
+            listen.port = 8787;
+          };
+          project-b = {
+            directory = "/srv/project-b";
+            listen.port = 9090;
+            environment.MY_VAR = "hello";
+          };
+        };
+      };
+    }
+  ];
+
+  test-two-services = assert
+    twoInstanceConfig.systemd.services ? "opencode-project-a"
+    && twoInstanceConfig.systemd.services ? "opencode-project-b";
+    "PASS: two instances produce independent service units";
+
+  test-listen-ports =
+    let
+      execA = twoInstanceConfig.systemd.services."opencode-project-a".serviceConfig.ExecStart;
+      execB = twoInstanceConfig.systemd.services."opencode-project-b".serviceConfig.ExecStart;
+    in
+    assert (builtins.match ".*8787.*" execA != null) && (builtins.match ".*9090.*" execB != null);
+    "PASS: listen ports reflected in ExecStart";
+
+  test-home-env =
+    let
+      env = twoInstanceConfig.systemd.services."opencode-project-a".environment;
+    in
+    assert env.HOME == "/var/lib/opencode/instance-state/project-a";
+    "PASS: HOME = stateDir in service environment";
+
+  test-firewall-default =
+    let
+      ports = twoInstanceConfig.networking.firewall.allowedTCPPorts;
+    in
+    assert ports == [ ];
+    "PASS: openFirewall defaults to closed";
+
+  test-hardening =
+    let
+      sc = twoInstanceConfig.systemd.services."opencode-project-a".serviceConfig;
+    in
+    assert
+      sc.ProtectKernelTunables == true
+      && sc.ProtectKernelModules == true
+      && sc.ProtectControlGroups == true
+      && sc.NoNewPrivileges == true;
+    "PASS: hardening flags enabled by default";
+
+  test-unix-socket =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.db-project = {
+              directory = "/srv/db-project";
+              sandbox.unixSockets.allow = [ "/run/postgresql/.s.PGSQL.5432" ];
+            };
+          };
+        }
+      ];
+    in
+    assert builtins.elem "/run/postgresql/.s.PGSQL.5432" cfg.systemd.services."opencode-db-project".serviceConfig.BindReadOnlyPaths;
+    "PASS: unix socket paths appear in BindReadOnlyPaths";
+
+  test-env-file =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            instances.secret-project = {
+              directory = "/srv/secret";
+              environmentFile = "/run/secrets/opencode.env";
+            };
+          };
+        }
+      ];
+    in
+    assert cfg.systemd.services."opencode-secret-project".serviceConfig.EnvironmentFile == "/run/secrets/opencode.env";
+    "PASS: environmentFile wired to EnvironmentFile=";
+
+  test-defaults-merge =
+    let
+      cfg = evalNixos [
+        {
+          services.opencode = {
+            enable = true;
+            defaults.listen.port = 8080;
+            instances.my-project = {
+              directory = "/srv/my-project";
+              listen.port = 9090;
+            };
+          };
+        }
+      ];
+      execStart = cfg.systemd.services."opencode-my-project".serviceConfig.ExecStart;
+    in
+    assert builtins.match ".*9090.*" execStart != null;
+    "PASS: instance listen.port overrides defaults";
+in
+pkgs.runCommand "opencode-module-eval-tests" { } ''
+  echo "Running opencode NixOS module evaluation tests..."
+  echo ${lib.escapeShellArg test-two-services}
+  echo ${lib.escapeShellArg test-listen-ports}
+  echo ${lib.escapeShellArg test-home-env}
+  echo ${lib.escapeShellArg test-firewall-default}
+  echo ${lib.escapeShellArg test-hardening}
+  echo ${lib.escapeShellArg test-unix-socket}
+  echo ${lib.escapeShellArg test-env-file}
+  echo ${lib.escapeShellArg test-defaults-merge}
+  echo "All eval tests passed."
+  touch "$out"
+''

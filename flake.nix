@@ -91,7 +91,11 @@
             modules = [];
             opencode = opencode.packages.${pkgs.system}.default;
           };
+
+          nixos-module-eval = import ./nix/nixos/tests/eval-tests.nix { inherit pkgs; };
         });
+
+      nixosTests = import ./nix/nixos/tests { pkgs = nixpkgs.legacyPackages.x86_64-linux; };
 
       # Reusable example modules that can be imported into your own config.
       examples = {
