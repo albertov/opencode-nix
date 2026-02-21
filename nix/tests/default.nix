@@ -564,6 +564,21 @@ let
     bun ${stripJsoncScript} "$src" "$out"
   '';
 
+  # Test 41: {file:path} template passthrough
+  fileTemplateConfig = mkOpenCodeConfig [
+    {
+      opencode.provider.custom = {
+        options.apiKey = "{file:secrets/api.key}";
+      };
+    }
+  ];
+
+  # Test 42: Invalid config Nix eval catches bad enum — Nix module type
+  # checking rejects "bogus" at eval time, before Zod even runs.
+  invalidNixEvalSucceeded = (builtins.tryEval (
+    builtins.deepSeq (mkOpenCodeConfig [{ opencode.logLevel = "bogus"; }]) true
+  )).success;
+
   # Script for deep structural comparison of two JSON files
   deepDiffScript = ./deep-diff.js;
 
@@ -595,7 +610,9 @@ pkgs.stdenvNoCC.mkDerivation {
     agentPrimaryModeConfig
     agentPrimaryFalseConfig agentModeOnlyConfig agentPrimaryFalseModeConfig
     fullParityConfig parityJsonCheck
-    samplePortConfig sampleReferenceJson stripJsoncScript deepDiffScript;
+    samplePortConfig sampleReferenceJson
+    fileTemplateConfig invalidNixEvalSucceeded
+    stripJsoncScript deepDiffScript;
 
   buildPhase = ''
     runHook preBuild
@@ -854,8 +871,24 @@ pkgs.stdenvNoCC.mkDerivation {
       exit 1
     fi
 
+    # ── Test 41: {file:path} template passthrough ────────────────────────
+
+    run_test "Test 41: {file:path} template passthrough" "$fileTemplateConfig"
+    assert_contains "Test 41" "$fileTemplateConfig" '{file:secrets/api.key}'
+
+    # ── Test 42: Invalid config caught at Nix eval ───────────────────────
+
+    echo "=== Test 42: Invalid config caught at Nix eval ==="
+    if [ "$invalidNixEvalSucceeded" = "" ] || [ "$invalidNixEvalSucceeded" = "0" ] || [ "$invalidNixEvalSucceeded" = "false" ]; then
+      echo "  PASS: Nix evaluation correctly rejected invalid logLevel"
+      PASS=$((PASS + 1))
+    else
+      echo "  FAIL: Nix evaluation should have rejected logLevel='bogus'"
+      FAIL=$((FAIL + 1))
+    fi
+
     echo ""
-    echo "All 40 tests passed! ($PASS Zod validations)"
+    echo "All tests passed! ($PASS validations)"
 
     runHook postBuild
   '';
