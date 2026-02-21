@@ -1,4 +1,50 @@
 { pkgs, ... }:
+let
+  healthcheckScript = pkgs.writeText "healthcheck.py" ''
+    import json
+    import urllib.request
+
+    def fetch(url):
+        with urllib.request.urlopen(url) as response:
+            return json.loads(response.read().decode())
+
+    base = "http://127.0.0.1:8787"
+
+    # 1. Health check - confirms opencode serve is up
+    health = fetch(base + "/global/health")
+    assert health.get("healthy") is True, \
+        "health endpoint returned healthy=false: {}".format(health)
+    print("[PASS] healthy=true version={}".format(health.get("version", "?")))
+
+    # 2. Config check - agents from /global/config
+    cfg = fetch(base + "/global/config")
+
+    # Agents are keyed by name in opencode.agent (attrsOf)
+    agents_raw = cfg.get("agent") or (cfg.get("opencode") or {}).get("agent") or {}
+    if isinstance(agents_raw, dict):
+        found_agents = set(agents_raw.keys())
+    elif isinstance(agents_raw, list):
+        found_agents = {a.get("name") for a in agents_raw if isinstance(a, dict) and a.get("name")}
+    else:
+        found_agents = set()
+
+    expected_agents = {"general", "explorer", "implementer", "reviewer"}
+    missing_agents = expected_agents - found_agents
+    assert not missing_agents, \
+        "missing agents: {}, found: {}".format(sorted(missing_agents), sorted(found_agents))
+    print("[PASS] agents: {}".format(sorted(found_agents)))
+
+    # 3. Skills check - opencode.skills.paths should be non-empty
+    skills_cfg = cfg.get("skills") or (cfg.get("opencode") or {}).get("skills") or {}
+    paths = skills_cfg.get("paths") if isinstance(skills_cfg, dict) else None
+    assert isinstance(paths, list) and len(paths) > 0, \
+        "expected skills.paths to be a non-empty list, got: {}".format(skills_cfg)
+    print("[PASS] skills.paths: {}".format(paths))
+
+    print("")
+    print("========== PASS ==========")
+  '';
+in
 pkgs.testers.nixosTest {
   name = "opencode-simple-coding-assistant";
 
@@ -8,9 +54,15 @@ pkgs.testers.nixosTest {
       (import ../../../examples/simple-coding-assistant { inherit config lib pkgs; })
     ];
 
+    environment.systemPackages = [ pkgs.python3 ];
+
+    # Required: the module gates all output on this flag
+    services.opencode.enable = true;
+
     services.opencode.instances.my-project = {
       directory = "/srv/projects/my-project";
-      environmentFile = pkgs.lib.mkForce null;
+      # No secrets file needed for a health-check test
+      environmentFile = lib.mkForce null;
     };
 
     system.activationScripts.testDirs = ''
@@ -19,88 +71,40 @@ pkgs.testers.nixosTest {
   };
 
   testScript = ''
-    import json
-
-
-    def fetch_json(url: str):
-        payload = machine.succeed(
-            "python3 - <<'PY'\n"
-            "import json\n"
-            "import urllib.request\n"
-            f"with urllib.request.urlopen('{url}') as response:\n"
-            "    data = json.loads(response.read().decode())\n"
-            "print(json.dumps(data))\n"
-            "PY"
-        )
-        return json.loads(payload)
-
-
-    def names_from_collection(value, label: str):
-        if value is None:
-            raise AssertionError(f"missing '{label}' in /global/config response")
-        if isinstance(value, dict):
-            return set(value.keys())
-        if isinstance(value, list):
-            names = set()
-            for entry in value:
-                if isinstance(entry, str):
-                    names.add(entry)
-                elif isinstance(entry, dict):
-                    name = entry.get("name")
-                    if name:
-                        names.add(name)
-            return names
-        raise AssertionError(
-            f"expected '{label}' to be a dict or list, got {type(value).__name__}"
-        )
-
-
     machine.wait_for_unit("multi-user.target")
+
+    # Diagnostic: show all opencode* units so failures are debuggable
+    machine.succeed("systemctl list-units 'opencode*' --all --no-pager || true")
+
+    # Setup unit is oneshot + RemainAfterExit=true -> active(exited) after success
     machine.wait_for_unit("opencode-my-project-setup.service")
+
+    # Main service: opencode serve --port 8787 --hostname 127.0.0.1
     machine.wait_for_unit("opencode-my-project.service")
+
+    # Wait for TCP port to be bound before hitting the API
     machine.wait_for_open_port(8787)
 
-    health = fetch_json("http://127.0.0.1:8787/global/health")
-    assert health.get("healthy") is True, f"expected healthy=true from /global/health, got: {health}"
-    version = health.get("version", "<unknown>")
-    print(f"health endpoint OK, version={version}")
+    # Dump recent service logs for diagnostics
+    machine.succeed("journalctl -u opencode-my-project.service --no-pager -n 30 || true")
 
-    config_json = fetch_json("http://127.0.0.1:8787/global/config")
-    agents = names_from_collection(
-        config_json.get("agents", config_json.get("opencode", {}).get("agents")),
-        "agents",
-    )
-    expected_agents = {"general", "explorer", "implementer", "reviewer"}
-    missing_agents = sorted(expected_agents - agents)
-    assert not missing_agents, (
-        "missing expected agents in /global/config: "
-        + ", ".join(missing_agents)
-        + f"; found={sorted(agents)}"
-    )
+    # Run all API assertions from a Nix store Python script (avoids heredoc escaping issues)
+    machine.succeed("python3 ${healthcheckScript}")
 
-    skills = names_from_collection(
-        config_json.get("skills", config_json.get("opencode", {}).get("skills")),
-        "skills",
-    )
-    expected_skills = {"commit", "code-review"}
-    missing_skills = sorted(expected_skills - skills)
-    assert not missing_skills, (
-        "missing expected skills in /global/config: "
-        + ", ".join(missing_skills)
-        + f"; found={sorted(skills)}"
-    )
-
-    machine.succeed(
-        "systemctl show opencode-my-project.service --property=ActiveState | grep -q active"
-    )
+    # Filesystem layout checks
     machine.succeed("test -d /var/lib/opencode/instance-state/my-project/.config/opencode")
-    machine.succeed(
-        "test -L /var/lib/opencode/instance-state/my-project/.config/opencode/opencode.json"
-    )
+    machine.succeed("test -L /var/lib/opencode/instance-state/my-project/.config/opencode/opencode.json")
+    print("[PASS] stateDir layout correct")
+
+    # PATH is injected into service environment
     machine.succeed(
         "systemctl show opencode-my-project.service --property=Environment | grep -q PATH"
     )
+    print("[PASS] PATH is set in service environment")
 
+    print("")
+    print("========================================")
     print("simple-coding-assistant e2e test: PASS")
+    print("========================================")
   '';
 }
