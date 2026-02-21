@@ -114,6 +114,83 @@ Then in your host config:
 
 See [`nix/nixos/README.md`](nix/nixos/README.md) for the full NixOS module reference.
 
+## Network Isolation
+
+### Basic setup example
+
+Enable outbound network restrictions for an opencode instance:
+
+```nix
+services.opencode.instances.my-project = {
+  directory = "/srv/my-project";
+  listen.port = 8787;
+  networkIsolation = {
+    enable = true;
+    outboundAllowCidrs = [
+      "10.0.0.0/8"        # internal network
+      "192.168.0.0/16"    # VPN range
+    ];
+  };
+};
+```
+
+### How it works
+
+- Uses nftables OUTPUT chain rules keyed to the service user's UID
+- Traffic to allowed CIDRs passes through; all other outbound is DROPped
+- Blocked attempts are logged to the kernel log with prefix `opencode-<name>-blocked`
+- Does NOT affect inbound traffic (only outbound from the service process)
+
+### Troubleshooting
+
+**Connection timeouts from the service**
+
+Symptom: service can't reach external APIs (e.g., Anthropic API)
+
+Diagnosis: Check kernel logs for blocked attempts
+```bash
+journalctl -k | grep opencode-my-project-blocked
+```
+
+Fix: Add the required CIDR(s) to `outboundAllowCidrs`
+
+**Checking which rules are active**
+
+```bash
+# List current nftables ruleset
+sudo nft list table inet opencode-my-project
+
+# Check if your service user's UID is correct
+id opencode-my-project
+```
+
+**Verifying a CIDR is allowed**
+
+```bash
+# Test outbound connectivity as the service user (exit code 7 = refused but reached, 28 = timed out/blocked)
+sudo -u opencode-my-project curl --max-time 5 -s http://<target-ip>/
+```
+
+**Blocked-attempt log observability**
+
+```bash
+# Tail kernel log for blocked attempts in real time
+journalctl -k -f | grep opencode-my-project-blocked
+
+# Or check recent blocked attempts
+dmesg | grep opencode-my-project-blocked
+```
+
+**Common CIDR ranges to allow**
+
+| Service | CIDR |
+|---------|------|
+| Anthropic API | `0.0.0.0/0` (allow all, disable isolation for cloud APIs) |
+| Internal GitLab | your internal IP range |
+| Corporate proxy | proxy server IP |
+
+Note: For cloud APIs that use dynamic IPs, consider disabling `networkIsolation` and using filesystem sandboxing (`sandbox.*`) for isolation instead.
+
 ## Running Tests
 
 ### Unit / eval tests (all platforms)
