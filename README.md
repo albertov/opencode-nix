@@ -59,6 +59,57 @@ Functions available via `pkgs.lib.opencode`:
 | `mkOpenCodeConfig modules` | Generate opencode.json derivation from NixOS-style modules |
 | `wrapOpenCode { name, modules, opencode }` | Wrap opencode binary with generated config |
 
+## NixOS Integration
+
+Import the module into your NixOS host configuration:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    ocnix.url = "github:your-org/ocnix";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    opencode.url = "github:sst/opencode";
+  };
+
+  outputs = { self, nixpkgs, ocnix, opencode, ... }: {
+    nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        # Apply the overlay so pkgs.opencode resolves inside the module
+        { nixpkgs.overlays = [ ocnix.overlays.default ]; }
+        # Import the NixOS module
+        ocnix.nixosModules.opencode
+        # Your host config
+        ./hosts/my-host.nix
+      ];
+      specialArgs = { inherit opencode; };
+    };
+  };
+}
+```
+
+Then in your host config:
+
+```nix
+# hosts/my-host.nix
+{ pkgs, opencode, ... }:
+{
+  services.opencode = {
+    enable = true;
+    instances = {
+      my-project = {
+        directory = "/srv/my-project";
+        listen.port = 8787;
+        package = opencode.packages.${pkgs.system}.default;
+      };
+    };
+  };
+}
+```
+
+> **Note:** `nixosModules.default` is an alias for `nixosModules.opencode` - both import the same module.
+
 ## NixOS Multi-Instance Service
 
 See [`nix/nixos/README.md`](nix/nixos/README.md) for the full NixOS module reference.

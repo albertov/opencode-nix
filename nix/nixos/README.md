@@ -4,16 +4,42 @@ NixOS module for running multiple isolated opencode server instances with virtua
 
 ## Import
 
+Add ocnix as a flake input and import the module into your NixOS configuration:
+
 ```nix
 # flake.nix
 {
-  inputs.ocnix.url = "github:your-org/ocnix";
-  outputs = { self, ocnix, ... }: {
+  inputs = {
+    ocnix.url = "github:your-org/ocnix";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    opencode.url = "github:sst/opencode";
+  };
+
+  outputs = { self, nixpkgs, ocnix, opencode, ... }: {
     nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
       modules = [
-        ocnix.nixosModules.opencode
-        ./my-host-config.nix
+        { nixpkgs.overlays = [ ocnix.overlays.default ]; }
+        ocnix.nixosModules.opencode   # or nixosModules.default (alias)
+        ./hosts/my-host.nix
       ];
+      specialArgs = { inherit opencode; };
+    };
+  };
+}
+```
+
+In your host config:
+
+```nix
+{ pkgs, opencode, ... }:
+{
+  services.opencode = {
+    enable = true;
+    instances.my-project = {
+      directory = "/srv/my-project";
+      listen.port = 8787;
+      package = opencode.packages.${pkgs.system}.default;
     };
   };
 }
