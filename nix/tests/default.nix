@@ -17,11 +17,11 @@
 # Nix store or binary cache it is fully reproducible.
 #
 
-{ pkgs, lib, opencode-src, mkOpenCodeConfig }:
+{ pkgs, lib, opencode, mkOpenCodeConfig }:
 
 let
   # Build node_modules using the upstream pattern (fixed-output derivation).
-  node_modules = pkgs.callPackage (opencode-src + "/nix/node_modules.nix") {
+  node_modules = pkgs.callPackage (opencode + "/nix/node_modules.nix") {
     rev = "test";
   };
 
@@ -605,7 +605,7 @@ pkgs.stdenvNoCC.mkDerivation {
     mkdir -p "$HOME"
 
     # ── Prepare writable source tree with node_modules ──
-    cp -r "${opencode-src}" "$TMPDIR/opencode"
+    cp -r "${opencode}" "$TMPDIR/opencode"
     chmod -R u+w "$TMPDIR/opencode"
 
     # Overlay pre-fetched node_modules

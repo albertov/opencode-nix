@@ -3,13 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    opencode-src = {
-      url = "github:sst/opencode";
-      flake = false;
-    };
+    opencode.url = "github:anomalyco/opencode";
   };
 
-  outputs = { self, nixpkgs, opencode-src }:
+  outputs = { self, nixpkgs, opencode }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -83,7 +80,7 @@
           # upstream Config.Info Zod schema from the opencode source.
           # Requires node_modules (fetched as a fixed-output derivation).
           config-zod-tests = import ./nix/tests {
-            inherit pkgs opencode-src;
+            inherit pkgs opencode;
             inherit (pkgs) lib;
             mkOpenCodeConfig = lib.mkOpenCodeConfig;
           };
