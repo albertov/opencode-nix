@@ -14,11 +14,11 @@
 
 ### Tasks
 
-- [ ] Remove `"$schema"` option from `nix/config/options/top-level.nix`
-- [ ] In `nix/config/lib.nix`, add `"$schema"` injection in the `mkOpenCodeConfig` pipeline (after cleanConfig, before writeText)
-- [ ] Update all examples that set `opencode."$schema"` to remove that line
-- [ ] Update all test fixtures that set `"$schema"` to remove it
-- [ ] Verify `nix flake check` passes — standalone config generation still works, generated JSON includes `$schema`
+- [x] Remove `"$schema"` option from `nix/config/options/top-level.nix` (evidence: `nix/config/options/top-level.nix`, commit `611841e`)
+- [x] In `nix/config/lib.nix`, add `"$schema"` injection in the `mkOpenCodeConfig` pipeline (after cleanConfig, before writeText) (evidence: `nix/config/lib.nix`, commit `611841e`)
+- [x] Update all examples that set `opencode."$schema"` to remove that line (evidence: `examples/chief-coding-assistant/default.nix`, commit `611841e`)
+- [x] Update all test fixtures that set `"$schema"` to remove it (evidence: `nix/tests/sample-port.nix`, commit `611841e`)
+- [x] Verify `nix flake check` passes — standalone config generation still works, generated JSON includes `$schema` (evidence: `nix flake check --no-warn-dirty 2>&1`, plus `flake.nix` empty-config assertion update in commit `611841e`)
 
 ---
 
