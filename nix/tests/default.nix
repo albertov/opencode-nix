@@ -652,6 +652,20 @@ let
     (builtins.tryEval (builtins.deepSeq (mkOpenCodeConfig [ { opencode.logLevel = "bogus"; } ]) true))
     .success;
 
+  # Test 47: $schema is not a settable option — evaluation should fail
+  schemaOptionRejected =
+    !(builtins.tryEval (
+      let
+        evaluated = pkgs.lib.evalModules {
+          modules = [
+            (import ../config/default.nix)
+            { opencode."$schema" = "https://opencode.ai/config.json"; }
+          ];
+        };
+      in
+      builtins.deepSeq evaluated.config true
+    )).success;
+
   # Script for deep structural comparison of two JSON files
   deepDiffScript = ./deep-diff.js;
 
@@ -716,6 +730,7 @@ pkgs.stdenvNoCC.mkDerivation {
     mcpOauthConfig
     mcpOauthDisabledConfig
     invalidNixEvalSucceeded
+    schemaOptionRejected
     stripJsoncScript
     deepDiffScript
     ;
@@ -1002,6 +1017,28 @@ pkgs.stdenvNoCC.mkDerivation {
 
     run_test "Test 44: Remote MCP with OAuth disabled (false)" "$mcpOauthDisabledConfig"
     assert_contains "Test 44" "$mcpOauthDisabledConfig" '"oauth":false'
+
+    # ── Tests 45–47: $schema auto-injection + option removal (ocnix-jqv.1.1) ──
+
+    echo "=== Test 45: \$schema auto-injected in minimal config ==="
+    assert_contains "Test 45" "$minimalConfig" '"$schema":"https://opencode.ai/config.json"'
+    echo "  PASS"
+    PASS=$((PASS + 1))
+
+    echo "=== Test 46: \$schema auto-injected in full config ==="
+    assert_contains "Test 46" "$fullConfig" '"$schema":"https://opencode.ai/config.json"'
+    echo "  PASS"
+    PASS=$((PASS + 1))
+
+    echo "=== Test 47: \$schema not settable as Nix option ==="
+    if [ "$schemaOptionRejected" = "1" ]; then
+      echo "  PASS: Nix evaluation correctly rejected \$schema option"
+      PASS=$((PASS + 1))
+    else
+      echo "  FAIL: Nix evaluation should have rejected \$schema as an option"
+      FAIL=$((FAIL + 1))
+      exit 1
+    fi
 
     echo ""
     echo "All tests passed! ($PASS validations)"
