@@ -33,6 +33,13 @@ examples/                          # importable example module configs
 - **All CLI flags via typed options or `extraArgs`** — no raw string command construction outside the module
 - **`stateDir != directory`** — enforced by module assertion; stateDir is runtime state, directory is the project worktree
 
+## NixOS test conventions
+
+- **Assert behavior, not internals** — every VM test MUST assert the service is up and responding via HTTP (`GET /global/health`), not just that files were written or units exist
+- **No stub binaries** — all VM tests use the real `pkgs.opencode` binary from the overlay; never use `writeShellScriptBin "opencode" "exec sleep infinity"`
+- **Shared health check** — use `pkgs.writeText` to write a Python healthcheck script and run it with `python3` (add `pkgs.python3` to `environment.systemPackages`); never use heredocs in testScript
+- **Minimum per-test assertions**: `wait_for_unit(setup)` → `wait_for_unit(main)` → `wait_for_open_port` → health check → feature-specific behavioral assertions
+
 ## Running checks
 
 ```bash

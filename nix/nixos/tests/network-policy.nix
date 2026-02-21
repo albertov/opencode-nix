@@ -1,9 +1,25 @@
 { pkgs, ... }:
+let
+  healthcheckScript = pkgs.writeText "healthcheck-network-policy.py" ''
+    import json
+    import urllib.request
+
+    def fetch(url):
+        with urllib.request.urlopen(url) as response:
+            return json.loads(response.read().decode())
+
+    health = fetch("http://127.0.0.1:8787/global/health")
+    assert health.get("healthy") is True, "health failed: {}".format(health)
+    print("[PASS] healthy version={}".format(health.get("version", "?")))
+  '';
+in
 pkgs.testers.nixosTest {
   name = "opencode-network-policy";
   nodes = {
     machine = { config, pkgs, ... }: {
       imports = [ (import ../module.nix) ];
+
+      environment.systemPackages = [ pkgs.python3 ];
 
       # nftables required for networkIsolation
       networking.nftables.enable = true;
@@ -13,9 +29,9 @@ pkgs.testers.nixosTest {
       services.opencode = {
         enable = true;
         defaults.directory = "/var/lib/opencode/default-directory";
-        defaults.package = pkgs.writeShellScriptBin "opencode" "exec sleep infinity";
         instances.isolated = {
           directory = "/srv/isolated";
+          listen.port = 8787;
           networkIsolation = {
             enable = true;
             outboundAllowCidrs = [ "10.0.0.0/8" ]; # internal only
@@ -41,6 +57,9 @@ pkgs.testers.nixosTest {
 
     # Setup service completed (fail-safe check passed = nftables was active)
     machine.wait_for_unit("opencode-isolated-setup.service")
+    machine.wait_for_unit("opencode-isolated.service")
+    machine.wait_for_open_port(8787)
+    machine.succeed("python3 ${healthcheckScript}")
 
     print("network-policy: PASS")
   '';

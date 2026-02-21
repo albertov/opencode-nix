@@ -235,6 +235,10 @@ in
           assertion = instance.stateDir != instance.directory;
           message = "services.opencode.instances.${name}.stateDir must differ from directory to avoid mixing runtime state with project files";
         }
+        {
+          assertion = !instance.networkIsolation.enable || config.networking.nftables.enable;
+          message = "opencode: networkIsolation requires networking.nftables.enable = true";
+        }
       ]) (lib.filterAttrs (_: i: i.enable) mergedInstances)))
       ++ [
         {
@@ -278,15 +282,6 @@ in
                 ++ lib.optionals (instance.provider != null) [ "--provider" instance.provider ]
                 ++ instance.extraArgs
               );
-
-              ExecStartPre = lib.optionals instance.networkIsolation.enable [
-                (pkgs.writeShellScript "opencode-${name}-check-nftables" ''
-                  if ! ${pkgs.nftables}/bin/nft list ruleset | ${pkgs.gnugrep}/bin/grep -q "opencode-egress"; then
-                    echo "ERROR: opencode-${name}: nftables egress policy not active; refusing to start" >&2
-                    exit 1
-                  fi
-                '')
-              ];
 
               Restart = "on-failure";
               RestartSec = "5s";
