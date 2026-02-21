@@ -7,4 +7,6 @@
   env-and-config = import ./env-and-config.nix { inherit pkgs; };
   postgres-socket = import ./postgres-socket.nix { inherit pkgs; };
   simple-coding-assistant = import ./simple-coding-assistant.nix { inherit pkgs; };
+  hook-ordering = import ./hook-ordering.nix { inherit pkgs; };
+  hook-failure = import ./hook-failure.nix { inherit pkgs; };
 }

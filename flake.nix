@@ -145,12 +145,14 @@
                   .#nixosTests.network-policy \
                   .#nixosTests.sandbox-isolation \
                   .#nixosTests.setup-idempotence \
-                  .#nixosTests.env-and-config \
-                  .#nixosTests.postgres-socket \
-                  .#nixosTests.simple-coding-assistant \
-                  --no-warn-dirty \
-                  -L \
-                  "$@"
+                    .#nixosTests.env-and-config \
+                    .#nixosTests.postgres-socket \
+                    .#nixosTests.simple-coding-assistant \
+                    .#nixosTests.hook-ordering \
+                    .#nixosTests.hook-failure \
+                    --no-warn-dirty \
+                    -L \
+                    "$@"
               '';
             }
           }/bin/run-nixos-tests";
