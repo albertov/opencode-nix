@@ -97,6 +97,30 @@
 
       nixosTests = import ./nix/nixos/tests { pkgs = nixpkgs.legacyPackages.x86_64-linux; };
 
+      apps.x86_64-linux.run-nixos-tests =
+        let
+          pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        in
+        {
+          type = "app";
+          program = "${pkgs.writeShellApplication {
+            name = "run-nixos-tests";
+            runtimeInputs = [ pkgs.nix ];
+            text = ''
+              exec nix build \
+                .#nixosTests.multi-instance \
+                .#nixosTests.network-policy \
+                .#nixosTests.sandbox-isolation \
+                .#nixosTests.setup-idempotence \
+                .#nixosTests.env-and-config \
+                .#nixosTests.postgres-socket \
+                --no-warn-dirty \
+                -L \
+                "$@"
+            '';
+          }}/bin/run-nixos-tests";
+        };
+
       # Reusable example modules that can be imported into your own config.
       examples = {
         chief-coding-assistant =

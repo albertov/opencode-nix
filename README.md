@@ -172,6 +172,11 @@ nix build \
   -L
 ```
 
+```bash
+# Or use the flake app (x86_64-linux only)
+nix run .#run-nixos-tests
+```
+
 VM tests are **not** included in `nix flake check` — run them individually with `nix build .#nixosTests.<name>`.
 
 ## Template Syntax: `{env:VAR}` and `{file:path}`
