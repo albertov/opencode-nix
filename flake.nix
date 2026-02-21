@@ -58,10 +58,10 @@
               config=${lib.mkOpenCodeConfig [ ]}
               content=$(cat "$config")
               echo "Generated config: $content"
-              if [ "$content" = "{}" ]; then
-                echo "PASS: empty config produces {}"
+              if [ "$content" = '{"$schema":"https://opencode.ai/config.json"}' ]; then
+                echo "PASS: empty config produces schema-only output"
               else
-                echo "FAIL: expected '{}' but got '$content'"
+                echo "FAIL: expected '{"\$schema":"https://opencode.ai/config.json"}' but got '$content'"
                 exit 1
               fi
               touch $out

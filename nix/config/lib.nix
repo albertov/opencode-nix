@@ -59,7 +59,11 @@ let
       };
       normalized = normalizeConfig evaluated.config.opencode;
       cleaned = cleanConfig normalized;
-      configJSON = builtins.toJSON cleaned;
+      withSchema = {
+        "$schema" = "https://opencode.ai/config.json";
+      }
+      // cleaned;
+      configJSON = builtins.toJSON withSchema;
     in
     pkgs.writeText "opencode.json" configJSON;
 

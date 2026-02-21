@@ -6,7 +6,6 @@ _:
 
 {
   opencode = {
-    "$schema" = "https://opencode.ai/config.json";
     snapshot = false;
     model = "{env:OPENCODE_MODEL_BIG}";
     small_model = "{env:OPENCODE_MODEL_SMALL}";

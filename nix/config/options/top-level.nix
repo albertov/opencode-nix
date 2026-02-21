@@ -5,12 +5,6 @@ let
 in
 {
   options.opencode = {
-    "$schema" = mkOption {
-      type = types.nullOr types.str;
-      default = null;
-      description = "JSON schema URL for editor completion and validation of opencode.json files.";
-      example = "https://opencode.ai/config.json";
-    };
     theme = mkOption {
       type = types.nullOr types.str;
       default = null;
