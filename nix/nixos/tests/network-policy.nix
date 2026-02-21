@@ -3,34 +3,84 @@ let
   healthcheckScript = pkgs.writeText "healthcheck-network-policy.py" ''
     import json
     import urllib.request
+    import sys
 
     def fetch(url):
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, timeout=10) as response:
             return json.loads(response.read().decode())
 
-    health = fetch("http://127.0.0.1:8787/global/health")
+    health = fetch(sys.argv[1])
     assert health.get("healthy") is True, "health failed: {}".format(health)
     print("[PASS] healthy version={}".format(health.get("version", "?")))
+  '';
+
+  httpServerScript = pkgs.writeText "http-server.py" ''
+    import http.server
+    import socketserver
+    import sys
+
+    PORT = int(sys.argv[1])
+    LOG_FILE = sys.argv[2] if len(sys.argv) > 2 else "/tmp/http-connections.log"
+
+    class LoggingHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            with open(LOG_FILE, "a") as f:
+                f.write(f"CONNECTION from {self.client_address[0]}:{self.client_address[1]}\\n")
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"OK\\n")
+
+        def log_message(self, format, *args):
+            pass
+
+    with socketserver.TCPServer(("0.0.0.0", PORT), LoggingHandler) as httpd:
+        httpd.serve_forever()
   '';
 in
 pkgs.testers.nixosTest {
   name = "opencode-network-policy";
+
   nodes = {
+    allowed =
+      { pkgs, ... }:
+      {
+        system.stateVersion = "24.11";
+        environment.systemPackages = [ pkgs.python3 ];
+        networking.firewall.enable = false;
+      };
+
+    blocked =
+      { pkgs, ... }:
+      {
+        system.stateVersion = "24.11";
+        environment.systemPackages = [ pkgs.python3 ];
+        networking.firewall.enable = false;
+      };
+
+    client =
+      { pkgs, ... }:
+      {
+        system.stateVersion = "24.11";
+        environment.systemPackages = [
+          pkgs.curl
+          pkgs.python3
+        ];
+      };
+
     machine =
       { pkgs, ... }:
       {
         imports = [ (import ../module.nix) ];
-
         system.stateVersion = "24.11";
-
         environment.systemPackages = [
           pkgs.curl
           pkgs.python3
         ];
 
-        # nftables required for networkIsolation
         networking.nftables.enable = true;
-        networking.firewall.enable = false;
+        networking.firewall.enable = true;
+
         users.users.opencode-isolated.uid = 975;
 
         services.opencode = {
@@ -38,71 +88,86 @@ pkgs.testers.nixosTest {
           defaults.directory = "/var/lib/opencode/default-directory";
           instances.isolated = {
             directory = "/srv/isolated";
-            listen.port = 8787;
+            listen = {
+              address = "0.0.0.0";
+              port = 8787;
+            };
+            openFirewall = true;
             networkIsolation = {
               enable = true;
-              outboundAllowCidrs = [ "10.0.0.0/8" ]; # internal only
+              outboundAllowCidrs = [ "192.168.1.1/32" ];
             };
           };
         };
+
         system.activationScripts.testDirs = "mkdir -p /srv/isolated";
       };
   };
 
   testScript = ''
+    start_all()
+
+    allowed.wait_for_unit("multi-user.target")
+    blocked.wait_for_unit("multi-user.target")
+    client.wait_for_unit("multi-user.target")
+
+    allowed.succeed("python3 ${httpServerScript} 19999 /tmp/http-connections.log &>/dev/null &")
+    blocked.succeed("python3 ${httpServerScript} 19999 /tmp/http-connections.log &>/dev/null &")
+    allowed.sleep(1)
+    blocked.sleep(1)
+
+    allowed.wait_for_open_port(19999)
+    blocked.wait_for_open_port(19999)
+
     machine.wait_for_unit("multi-user.target")
     machine.wait_for_unit("nftables.service")
-
-    # nftables table is active
-    machine.succeed("nft list table inet opencode-egress")
-
-    # Allowed range: 10.0.0.1 should be reachable (ping may fail if no route, but connection attempt is not blocked by nftables)
-    # We test the rule exists and has correct structure
-    output = machine.succeed("nft list table inet opencode-egress")
-    assert "opencode-isolated-blocked" in output, f"Expected log prefix in nftables output: {output}"
-    assert "10.0.0.0/8" in output, f"Expected CIDR in nftables output: {output}"
-
-    # Setup service completed (fail-safe check passed = nftables was active)
     machine.wait_for_unit("opencode-isolated-setup.service")
     machine.wait_for_unit("opencode-isolated.service")
     machine.wait_for_open_port(8787)
-    machine.succeed("python3 ${healthcheckScript}")
 
-    # == Behavioral traffic probes ==
+    output = machine.succeed("nft list table inet opencode-egress")
+    assert "opencode-isolated-blocked" in output, f"Expected log prefix in nftables output: {output}"
+    assert "192.168.1.1" in output, f"Expected allowed CIDR in nftables output: {output}"
+    print("Test 1 PASS: nftables structure correct")
 
-    # Start a local HTTP listener so we have a concrete target
-    machine.execute("python3 -m http.server 19999 &>/tmp/httpd.log &")
-    machine.sleep(1)
+    client.succeed("python3 ${healthcheckScript} http://machine:8787/global/health")
+    print("Test 2 PASS: inbound through firewall works (openFirewall=true)")
 
-    # ALLOWED: connection from the service user to an IP inside 10.0.0.0/8
-    # 10.0.2.15 is this QEMU VM's own IP - inside the allowed CIDR.
-    # curl exits: 0 (200 OK), 22 (non-2xx), or 7 (connection refused) all mean
-    # the packet got through nftables. Exit 28 (timeout) would mean it was dropped.
-    machine.succeed("sudo -u opencode-isolated curl --max-time 5 --silent http://10.0.2.15:19999/; code=$?; [ $code -ne 28 ]")
+    machine.succeed(
+      "sudo -u opencode-isolated curl --max-time 5 --silent http://allowed:19999/"
+    )
+    allowed.succeed("grep -q 'CONNECTION from' /tmp/http-connections.log")
+    print("Test 3 PASS: outbound to allowed CIDR succeeds (verified at target)")
 
-    # BLOCKED: connection to external IP (outside 10.0.0.0/8) - must be dropped
-    # nftables DROP -> curl times out -> exits non-zero -> machine.fail assertion holds
-    machine.fail("sudo -u opencode-isolated curl --max-time 3 --silent http://1.1.1.1:19999/")
+    blocked.succeed("truncate -s 0 /tmp/http-connections.log")
 
-    # OBSERVABILITY: after the blocked probe, kernel log must contain the log prefix
+    machine.fail(
+      "sudo -u opencode-isolated curl --max-time 3 --silent http://blocked:19999/"
+    )
+    blocked.succeed("test ! -s /tmp/http-connections.log")
+    print("Test 4 PASS: outbound to non-allowed IP blocked (verified at target - no connection received)")
+
     machine.wait_until_succeeds(
       "journalctl -k | grep -q 'opencode-isolated-blocked'",
       timeout=10
     )
+    print("Test 5 PASS: blocked outbound logged with instance prefix")
 
-    # == Rate-limit observability test ==
-    # Generate a burst of 10 blocked connection attempts
     for i in range(10):
-        machine.execute("sudo -u opencode-isolated curl --max-time 1 --silent http://1.1.1.1:19999/ || true")
+      machine.execute(
+        "sudo -u opencode-isolated curl --max-time 1 --silent http://blocked:19999/ || true"
+      )
     machine.sleep(2)
 
-    # Count logged blocked entries — rate limit is 5/minute, so we expect <= 5 (not all 10+)
-    # (we had 1 from the earlier probe + 10 from burst = 11 total attempts, but only <=6 should be logged)
-    count = int(machine.succeed("journalctl -k | grep -c 'opencode-isolated-blocked' || echo 0").strip())
-    assert count <= 6, f"Expected rate-limited log entries (<=6), got {count} — rate limiting not working"
-    assert count >= 1, f"Expected at least 1 log entry, got {count}"
-    print(f"network-policy: rate-limit check PASS (logged {count} of 11+ attempts)")
+    count = int(machine.succeed(
+      "journalctl -k | grep -c 'opencode-isolated-blocked' || echo 0"
+    ).strip())
+    assert 1 <= count <= 6, f"Expected 1-6 rate-limited log entries, got {count}"
+    print(f"Test 6 PASS: rate limiting works (logged {count} of 11+ blocked attempts)")
 
-    print("network-policy: behavioral probes PASS")
+    blocked.succeed("test ! -s /tmp/http-connections.log")
+    print("Test 7 PASS: blocked node received zero connections even after burst")
+
+    print("network-policy: ALL TESTS PASS")
   '';
 }
