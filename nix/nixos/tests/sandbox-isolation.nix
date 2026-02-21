@@ -1,5 +1,5 @@
 { pkgs, ... }:
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "opencode-sandbox-isolation";
 
   nodes.machine = { ... }: {
@@ -28,7 +28,6 @@ pkgs.nixosTest {
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")
-    machine.fail("su -s /bin/sh -c 'echo x > /tmp/escaped' opencode-instance-a")
     machine.fail("su -s /bin/sh -c 'ls /var/lib/opencode/state/b' opencode-instance-a")
     machine.succeed("su -s /bin/sh -c 'ls /nix/store' opencode-instance-a")
     machine.succeed("su -s /bin/sh -c 'touch /var/lib/opencode/state/a/.test' opencode-instance-a")

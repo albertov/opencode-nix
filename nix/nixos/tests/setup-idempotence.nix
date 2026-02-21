@@ -1,5 +1,5 @@
 { pkgs, ... }:
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "opencode-setup-idempotence";
 
   nodes.machine = { ... }: {

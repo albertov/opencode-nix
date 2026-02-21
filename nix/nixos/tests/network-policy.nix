@@ -1,5 +1,5 @@
 { pkgs, ... }:
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "opencode-network-policy";
   nodes = {
     machine = { config, pkgs, ... }: {
@@ -7,9 +7,13 @@ pkgs.nixosTest {
 
       # nftables required for networkIsolation
       networking.nftables.enable = true;
+      networking.firewall.enable = false;
+      users.users.opencode-isolated.uid = 975;
 
       services.opencode = {
         enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        defaults.package = pkgs.writeShellScriptBin "opencode" "exec sleep infinity";
         instances.isolated = {
           directory = "/srv/isolated";
           networkIsolation = {

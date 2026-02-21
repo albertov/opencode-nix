@@ -375,14 +375,19 @@ in
           let
             instanceRules = lib.mapAttrsToList (name: instance:
               let
+                skuid =
+                  let
+                    uid = config.users.users.${instance.user}.uid or null;
+                  in
+                  if uid == null then ''"${instance.user}"'' else toString uid;
                 allowRules = lib.concatMapStringsSep "\n" (cidr:
                   if lib.hasInfix ":" cidr then
                     ''
-                      meta skuid "${instance.user}" ip6 daddr ${cidr} accept
+                      meta skuid ${skuid} ip6 daddr ${cidr} accept
                     ''
                   else
                     ''
-                      meta skuid "${instance.user}" ip daddr ${cidr} accept
+                      meta skuid ${skuid} ip daddr ${cidr} accept
                     ''
                 ) instance.networkIsolation.outboundAllowCidrs;
               in
@@ -391,8 +396,8 @@ in
                 # Outbound allow-list for ${name} enforced by UID match
                 ${allowRules}
                 # Log and drop other outbound from this user (rate limited)
-                meta skuid "${instance.user}" limit rate 5/minute log prefix "opencode-${name}-blocked: " drop
-                meta skuid "${instance.user}" drop
+                meta skuid ${skuid} limit rate 5/minute log prefix "opencode-${name}-blocked: " drop
+                meta skuid ${skuid} drop
               ''
             ) isolatedInstances;
           in
@@ -414,7 +419,7 @@ in
         isSystemUser = true;
         group = instance.group;
         home = instance.stateDir;
-        createHome = false;
+        createHome = true;
       }
     ) enabledInstances;
 

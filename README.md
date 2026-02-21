@@ -8,21 +8,25 @@ Nix module system for generating [opencode](https://github.com/sst/opencode) con
 # flake.nix
 {
   inputs = {
-    opencode-nix.url = "github:your-org/opencode-nix";
+    ocnix.url = "github:your-org/ocnix";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    opencode.url = "github:anomalyco/opencode";
   };
 
-  outputs = { self, nixpkgs, opencode-nix }:
+  outputs = { self, nixpkgs, ocnix, opencode, ... }:
     let
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      myConfig = opencode-nix.lib.mkOpenCodeConfig [
-        {
-          opencode.theme = "catppuccin";
-          opencode.model = "anthropic/claude-sonnet-4-5";
-        }
-      ];
+      pkgs = nixpkgs.legacyPackages.x86_64-linux.extend ocnix.overlays.default;
     in {
-      packages.default = myConfig;
+      packages.x86_64-linux.my-opencode = pkgs.lib.opencode.wrapOpenCode {
+        name = "my-opencode";
+        modules = [
+          {
+            opencode.theme = "catppuccin";
+            opencode.model = "anthropic/claude-sonnet-4-5";
+          }
+        ];
+        opencode = opencode.packages.x86_64-linux.default;
+      };
     };
 }
 ```
@@ -55,17 +59,62 @@ Functions available via `pkgs.lib.opencode`:
 | `mkOpenCodeConfig modules` | Generate opencode.json derivation from NixOS-style modules |
 | `wrapOpenCode { name, modules, opencode }` | Wrap opencode binary with generated config |
 
-## Functions
+## NixOS Multi-Instance Service
 
-### `lib.mkOpenCodeConfig modules`
+See [`nix/nixos/README.md`](nix/nixos/README.md) for the full NixOS module reference.
 
-Takes a list of Nix modules and produces a derivation containing `opencode.json`.
-Modules are merged using the NixOS module system — later modules override earlier ones,
-and list options (like `instructions`) are concatenated.
+## Running Tests
 
-### `lib.wrapOpenCode { name, modules, opencode }`
+### Unit / eval tests (all platforms)
 
-Produces a wrapped opencode binary with the config pre-baked via `OPENCODE_CONFIG`.
+```bash
+nix flake check
+```
+
+Runs on every `nix flake check`:
+- `empty-config` — empty module produces `{}`
+- `wrap-opencode-type` — theme field present in output
+- `field-output-check` — multi-field output correct
+- `config-zod-tests` — generated configs pass upstream Zod schema
+- `overlay-mkOpenCodeConfig` — overlay API resolves correctly
+- `overlay-wrapOpenCode` — overlay wrapOpenCode resolves correctly
+- `nixos-module-eval` — NixOS module option types and unit rendering
+
+### NixOS VM integration tests (Linux + KVM only)
+
+Build and run individual VM tests:
+
+```bash
+# Multi-instance lifecycle
+nix build .#nixosTests.multi-instance
+
+# Filesystem sandbox and cross-instance isolation
+nix build .#nixosTests.sandbox-isolation
+
+# Setup service idempotence + lifecycle hooks
+nix build .#nixosTests.setup-idempotence
+
+# Environment variables, environmentFile, config symlink
+nix build .#nixosTests.env-and-config
+
+# Outbound network policy and blocked-attempt logging
+nix build .#nixosTests.network-policy
+
+# Unix socket allowlist with PostgreSQL (demonstrates sandbox.unixSockets.allow)
+nix build .#nixosTests.postgres-socket
+```
+
+These tests use QEMU VMs and require KVM. On a NixOS host:
+
+```bash
+# Run with verbose output
+nix build .#nixosTests.multi-instance -L
+
+# Run all VM tests (builds in parallel)
+nix build .#nixosTests.{multi-instance,sandbox-isolation,setup-idempotence,env-and-config,network-policy,postgres-socket}
+```
+
+On CI (if KVM is available), VM tests are included automatically in `nix flake check` on `x86_64-linux`.
 
 ## Template Syntax: `{env:VAR}` and `{file:path}`
 
@@ -130,7 +179,7 @@ Modules compose naturally. Split your config into reusable layers:
 
 ```nix
 # Compose them:
-myConfig = opencode-nix.lib.mkOpenCodeConfig [
+myConfig = pkgs.lib.opencode.mkOpenCodeConfig [
   ./team-base.nix
   ./mcp-servers.nix
   ./personal.nix

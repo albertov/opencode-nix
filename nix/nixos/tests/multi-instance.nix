@@ -1,5 +1,5 @@
 { pkgs, ... }:
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "opencode-multi-instance";
 
   nodes.machine = { config, pkgs, ... }: {
@@ -7,6 +7,8 @@ pkgs.nixosTest {
 
     services.opencode = {
       enable = true;
+      defaults.directory = "/var/lib/opencode/default-directory";
+      defaults.package = pkgs.writeShellScriptBin "opencode" "exec sleep infinity";
       instances = {
         project-a = {
           directory = "/srv/project-a";

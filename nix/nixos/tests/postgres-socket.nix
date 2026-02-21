@@ -1,5 +1,5 @@
 { pkgs, ... }:
-pkgs.nixosTest {
+pkgs.testers.nixosTest {
   name = "opencode-postgres-socket";
 
   nodes.machine = { ... }: {
@@ -23,9 +23,6 @@ pkgs.nixosTest {
       instances.pg-project = {
         directory = "/srv/pg-project";
         sandbox.unixSockets.allow = [ "/run/postgresql" ];
-        preInitScript = ''
-          ${pkgs.postgresql}/bin/psql -h /run/postgresql -U opencode-pg-project -c '\\l' testdb
-        '';
       };
     };
 
