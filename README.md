@@ -177,7 +177,7 @@ nix build \
 nix run .#run-nixos-tests
 ```
 
-VM tests are **not** included in `nix flake check` — run them individually with `nix build .#nixosTests.<name>`.
+VM tests are included in `nix flake check` on x86_64-linux (requires KVM).
 
 ## Template Syntax: `{env:VAR}` and `{file:path}`
 

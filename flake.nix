@@ -32,8 +32,7 @@
         let
           lib = mkLib pkgs;
           overlayPkgs = pkgs.extend self.overlays.default;
-        in
-        {
+          baseChecks = {
           empty-config = pkgs.runCommand "empty-config-test" {} ''
             config=${lib.mkOpenCodeConfig []}
             content=$(cat "$config")
@@ -93,7 +92,11 @@
           };
 
           nixos-module-eval = import ./nix/nixos/tests/eval-tests.nix { inherit pkgs; };
-        });
+          };
+        in
+        baseChecks // nixpkgs.lib.optionalAttrs (pkgs.system == "x86_64-linux") (
+          import ./nix/nixos/tests { inherit pkgs; }
+        ));
 
       nixosTests = import ./nix/nixos/tests { pkgs = nixpkgs.legacyPackages.x86_64-linux; };
 
