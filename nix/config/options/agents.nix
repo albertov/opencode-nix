@@ -4,7 +4,11 @@ let
   inherit (lib) mkOption types;
 
   # Matches upstream PermissionRule = PermissionAction | PermissionObject.
-  permissionAction = types.enum [ "allow" "ask" "deny" ];
+  permissionAction = types.enum [
+    "allow"
+    "ask"
+    "deny"
+  ];
   permissionRule = types.either permissionAction (types.attrsOf permissionAction);
   permissionType = types.attrsOf permissionRule;
 
@@ -61,7 +65,13 @@ let
         description = "Maximum number of tool-call steps the agent may take in a single turn before stopping.";
       };
       mode = mkOption {
-        type = types.nullOr (types.enum [ "subagent" "primary" "all" ]);
+        type = types.nullOr (
+          types.enum [
+            "subagent"
+            "primary"
+            "all"
+          ]
+        );
         default = null;
         description = ''
           Agent availability mode. 'primary' — available as a top-level agent;
@@ -105,7 +115,10 @@ let
           Per-agent permission overrides. Maps tool names to 'allow', 'ask', or 'deny',
           or to a nested map for path/sub-tool scoped rules.
         '';
-        example = { bash = "ask"; edit = "allow"; };
+        example = {
+          bash = "ask";
+          edit = "allow";
+        };
       };
       options = mkOption {
         type = types.nullOr (types.attrsOf types.anything);

@@ -2,7 +2,7 @@
 # This module, when evaluated via mkOpenCodeConfig, should produce JSON
 # that is structurally identical to the sample (modulo key order and
 # JSONC comments / commented-out sections).
-{ ... }:
+_:
 
 {
   opencode = {
@@ -25,8 +25,18 @@
         };
         models."org/large-language-model" = {
           name = "Large Language Model";
-          limit = { context = 200000; output = 128000; };
-          modalities = { input = [ "text" "image" "pdf" ]; output = [ "text" ]; };
+          limit = {
+            context = 200000;
+            output = 128000;
+          };
+          modalities = {
+            input = [
+              "text"
+              "image"
+              "pdf"
+            ];
+            output = [ "text" ];
+          };
         };
       };
       ollama = {
@@ -39,27 +49,45 @@
           "codestral-22b-v0.1" = {
             name = "Codestral 22B";
             tool_call = true;
-            limit = { context = 200000; output = 32768; };
+            limit = {
+              context = 200000;
+              output = 32768;
+            };
           };
           "llava-v1.6-34b" = {
             name = "LLaVA 1.6 34B";
             tool_call = true;
             reasoning = true;
             attachment = true;
-            modalities = { input = [ "text" "image" ]; output = [ "text" ]; };
-            limit = { context = 256000; output = 32768; };
+            modalities = {
+              input = [
+                "text"
+                "image"
+              ];
+              output = [ "text" ];
+            };
+            limit = {
+              context = 256000;
+              output = 32768;
+            };
           };
           "llama-3.3-70b-instruct" = {
             name = "Llama 3.3 70B";
             temperature = true;
             tool_call = true;
-            limit = { context = 198000; output = 64000; };
+            limit = {
+              context = 198000;
+              output = 64000;
+            };
           };
           "llama-3.3-70b-instruct-bf16" = {
             name = "Llama 3.3 70B (bf16)";
             temperature = true;
             tool_call = true;
-            limit = { context = 64000; output = 64000; };
+            limit = {
+              context = 64000;
+              output = 64000;
+            };
           };
         };
       };
@@ -73,7 +101,10 @@
 
     mcp.tilth = {
       type = "local";
-      command = [ "tilth" "--mcp" ];
+      command = [
+        "tilth"
+        "--mcp"
+      ];
       enabled = true;
       timeout = 30000;
     };
@@ -122,7 +153,9 @@
         prompt = "{file:./prompts/data-processor.md}";
         permission = {
           "*" = "deny";
-          skill = { data-import-tool = "allow"; };
+          skill = {
+            data-import-tool = "allow";
+          };
           read = "allow";
           bash = "allow";
           glob = "allow";

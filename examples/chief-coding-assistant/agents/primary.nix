@@ -1,5 +1,5 @@
 # Primary agents: chief, bird, plan, explore, general, data-processor
-{ ... }:
+_:
 
 {
   opencode.agent = {

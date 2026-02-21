@@ -1,5 +1,5 @@
 # Language expert subagents: bash, CUDA, Haskell, Nix, Python, ReScript, Rust
-{ ... }:
+_:
 
 {
   opencode.agent = {

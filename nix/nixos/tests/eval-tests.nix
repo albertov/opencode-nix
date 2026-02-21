@@ -1,18 +1,20 @@
 { pkgs }:
 let
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
-  evalNixos = modules:
+  evalNixos =
+    modules:
     (import "${pkgs.path}/nixos/lib/eval-config.nix" {
       inherit pkgs;
-      system = pkgs.stdenv.hostPlatform.system;
+      inherit (pkgs.stdenv.hostPlatform) system;
       modules = [
         ../module.nix
         {
           services.opencode.defaults.directory = "/var/lib/opencode/default-directory";
           services.opencode.defaults.package = pkgs.hello;
         }
-      ] ++ modules;
+      ]
+      ++ modules;
     }).config;
 
   twoInstanceConfig = evalNixos [
@@ -34,9 +36,10 @@ let
     }
   ];
 
-  test-two-services = assert
-    twoInstanceConfig.systemd.services ? "opencode-project-a"
-    && twoInstanceConfig.systemd.services ? "opencode-project-b";
+  test-two-services =
+    assert
+      twoInstanceConfig.systemd.services ? "opencode-project-a"
+      && twoInstanceConfig.systemd.services ? "opencode-project-b";
     "PASS: two instances produce independent service units";
 
   test-listen-ports =
@@ -66,10 +69,10 @@ let
       sc = twoInstanceConfig.systemd.services."opencode-project-a".serviceConfig;
     in
     assert
-      sc.ProtectKernelTunables == true
-      && sc.ProtectKernelModules == true
-      && sc.ProtectControlGroups == true
-      && sc.NoNewPrivileges == true;
+      sc.ProtectKernelTunables
+      && sc.ProtectKernelModules
+      && sc.ProtectControlGroups
+      && sc.NoNewPrivileges;
     "PASS: hardening flags enabled by default";
 
   test-unix-socket =
@@ -86,7 +89,8 @@ let
         }
       ];
     in
-    assert builtins.elem "/run/postgresql/.s.PGSQL.5432" cfg.systemd.services."opencode-db-project".serviceConfig.BindReadOnlyPaths;
+    assert builtins.elem "/run/postgresql/.s.PGSQL.5432"
+      cfg.systemd.services."opencode-db-project".serviceConfig.BindReadOnlyPaths;
     "PASS: unix socket paths appear in BindReadOnlyPaths";
 
   test-env-file =
@@ -103,7 +107,9 @@ let
         }
       ];
     in
-    assert cfg.systemd.services."opencode-secret-project".serviceConfig.EnvironmentFile == "/run/secrets/opencode.env";
+    assert
+      cfg.systemd.services."opencode-secret-project".serviceConfig.EnvironmentFile
+      == "/run/secrets/opencode.env";
     "PASS: environmentFile wired to EnvironmentFile=";
 
   test-defaults-merge =

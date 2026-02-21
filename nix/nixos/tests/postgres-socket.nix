@@ -16,34 +16,36 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-postgres-socket";
 
-  nodes.machine = { pkgs, ... }: {
-    imports = [ ../module.nix ];
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ ../module.nix ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    services.postgresql = {
-      enable = true;
-      ensureDatabases = [ "testdb" ];
-      ensureUsers = [
-        {
-          name = "opencode-pg-project";
-          ensureDBOwnership = false;
-        }
-      ];
-    };
-
-    services.opencode = {
-      enable = true;
-      defaults.directory = "/var/lib/opencode/default-directory";
-      instances.pg-project = {
-        directory = "/srv/pg-project";
-        listen.port = 8787;
-        sandbox.unixSockets.allow = [ "/run/postgresql" ];
+      services.postgresql = {
+        enable = true;
+        ensureDatabases = [ "testdb" ];
+        ensureUsers = [
+          {
+            name = "opencode-pg-project";
+            ensureDBOwnership = false;
+          }
+        ];
       };
-    };
 
-    system.activationScripts.testDirs = "mkdir -p /srv/pg-project";
-  };
+      services.opencode = {
+        enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        instances.pg-project = {
+          directory = "/srv/pg-project";
+          listen.port = 8787;
+          sandbox.unixSockets.allow = [ "/run/postgresql" ];
+        };
+      };
+
+      system.activationScripts.testDirs = "mkdir -p /srv/pg-project";
+    };
 
   testScript = ''
     machine.wait_for_unit("postgresql.service")

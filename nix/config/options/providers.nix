@@ -4,7 +4,13 @@ let
   inherit (lib) mkOption types;
 
   # Modality values supported by the upstream schema.
-  modalityType = types.enum [ "text" "audio" "image" "video" "pdf" ];
+  modalityType = types.enum [
+    "text"
+    "audio"
+    "image"
+    "video"
+    "pdf"
+  ];
 
   # Per-model metadata matching ModelsDev.Model fields used by OpenAI-compatible providers.
   modelSubmodule = types.submodule {
@@ -36,42 +42,49 @@ let
         description = "Whether this model accepts a temperature sampling parameter.";
       };
       limit = mkOption {
-        type = types.nullOr (types.submodule {
-          options = {
-            context = mkOption {
-              type = types.nullOr types.ints.positive;
-              default = null;
-              description = "Maximum context window size in tokens.";
-              example = 128000;
+        type = types.nullOr (
+          types.submodule {
+            options = {
+              context = mkOption {
+                type = types.nullOr types.ints.positive;
+                default = null;
+                description = "Maximum context window size in tokens.";
+                example = 128000;
+              };
+              output = mkOption {
+                type = types.nullOr types.ints.positive;
+                default = null;
+                description = "Maximum output length in tokens.";
+                example = 16384;
+              };
             };
-            output = mkOption {
-              type = types.nullOr types.ints.positive;
-              default = null;
-              description = "Maximum output length in tokens.";
-              example = 16384;
-            };
-          };
-        });
+          }
+        );
         default = null;
         description = "Token limit metadata for this model.";
       };
       modalities = mkOption {
-        type = types.nullOr (types.submodule {
-          options = {
-            input = mkOption {
-              type = types.nullOr (types.listOf modalityType);
-              default = null;
-              description = "Input modalities this model accepts (e.g. text, image).";
-              example = [ "text" "image" ];
+        type = types.nullOr (
+          types.submodule {
+            options = {
+              input = mkOption {
+                type = types.nullOr (types.listOf modalityType);
+                default = null;
+                description = "Input modalities this model accepts (e.g. text, image).";
+                example = [
+                  "text"
+                  "image"
+                ];
+              };
+              output = mkOption {
+                type = types.nullOr (types.listOf modalityType);
+                default = null;
+                description = "Output modalities this model can produce.";
+                example = [ "text" ];
+              };
             };
-            output = mkOption {
-              type = types.nullOr (types.listOf modalityType);
-              default = null;
-              description = "Output modalities this model can produce.";
-              example = [ "text" ];
-            };
-          };
-        });
+          }
+        );
         default = null;
         description = "Supported input and output modalities for this model.";
       };
@@ -99,7 +112,10 @@ let
         type = types.nullOr (types.listOf types.str);
         default = null;
         description = "Model IDs to exclusively show from this provider. When set, only these models appear in the picker.";
-        example = [ "claude-sonnet-4-20250514" "claude-haiku-4-5-20250514" ];
+        example = [
+          "claude-sonnet-4-20250514"
+          "claude-haiku-4-5-20250514"
+        ];
       };
       blacklist = mkOption {
         type = types.nullOr (types.listOf types.str);

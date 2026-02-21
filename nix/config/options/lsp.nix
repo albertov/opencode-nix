@@ -9,13 +9,19 @@ let
         type = types.nullOr (types.listOf types.str);
         default = null;
         description = "Command and arguments to launch the LSP server process. The server must communicate via stdio. Required for custom LSP servers; omit when disabling a built-in LSP.";
-        example = [ "typescript-language-server" "--stdio" ];
+        example = [
+          "typescript-language-server"
+          "--stdio"
+        ];
       };
       extensions = mkOption {
         type = types.nullOr (types.listOf types.str);
         default = null;
         description = "File extensions this LSP handles. Required for custom LSP servers to associate file types.";
-        example = [ ".ts" ".tsx" ];
+        example = [
+          ".ts"
+          ".tsx"
+        ];
       };
       disabled = mkOption {
         type = types.nullOr types.bool;

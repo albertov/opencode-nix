@@ -1,5 +1,5 @@
 # Provider configurations: Custom OpenAI-compatible, Ollama (local), Amazon Bedrock
-{ ... }:
+_:
 
 {
   opencode.provider = {
@@ -20,8 +20,17 @@
         reasoning = true;
         tool_call = true;
         temperature = true;
-        limit = { context = 200000; output = 64000; };
-        modalities = { input = [ "text" "image" ]; output = [ "text" ]; };
+        limit = {
+          context = 200000;
+          output = 64000;
+        };
+        modalities = {
+          input = [
+            "text"
+            "image"
+          ];
+          output = [ "text" ];
+        };
       };
     };
 
@@ -31,6 +40,6 @@
     };
 
     # Amazon Bedrock — provider-specific options passed through to the SDK
-    amazon-bedrock = {};
+    amazon-bedrock = { };
   };
 }

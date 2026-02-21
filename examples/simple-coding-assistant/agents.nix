@@ -1,5 +1,4 @@
-{ lib, ... }:
-{
+_: {
   opencode.agent = {
     general = {
       description = "General-purpose assistant for research, planning, and multi-step tasks";

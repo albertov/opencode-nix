@@ -1,6 +1,6 @@
 # Permission model: deny-by-default with specific tool allowances.
 # Supports nested maps for path-scoped and sub-tool-scoped rules.
-{ ... }:
+_:
 
 {
   opencode.permission = {

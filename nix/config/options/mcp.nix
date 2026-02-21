@@ -26,7 +26,12 @@ let
   mcpSubmodule = types.submodule {
     options = {
       type = mkOption {
-        type = types.nullOr (types.enum [ "local" "remote" ]);
+        type = types.nullOr (
+          types.enum [
+            "local"
+            "remote"
+          ]
+        );
         default = null;
         description = ''
           MCP server type. 'local' runs a command as a child process communicating via stdio;
@@ -38,7 +43,12 @@ let
         type = types.nullOr (types.listOf types.str);
         default = null;
         description = "Command and arguments to launch a local MCP server process (only for type = 'local').";
-        example = [ "npx" "-y" "@modelcontextprotocol/server-filesystem" "/tmp" ];
+        example = [
+          "npx"
+          "-y"
+          "@modelcontextprotocol/server-filesystem"
+          "/tmp"
+        ];
       };
       environment = mkOption {
         type = types.nullOr (types.attrsOf types.str);
@@ -47,7 +57,9 @@ let
           Environment variables passed to the local MCP server process.
           Values support '{env:VAR}' syntax for runtime substitution.
         '';
-        example = { GITHUB_TOKEN = "{env:GITHUB_TOKEN}"; };
+        example = {
+          GITHUB_TOKEN = "{env:GITHUB_TOKEN}";
+        };
       };
       # Remote MCP fields
       url = mkOption {
@@ -63,7 +75,9 @@ let
           HTTP headers sent with every request to a remote MCP server.
           Values support '{env:VAR}' syntax for runtime secret injection.
         '';
-        example = { Authorization = "Bearer {env:MCP_TOKEN}"; };
+        example = {
+          Authorization = "Bearer {env:MCP_TOKEN}";
+        };
       };
       oauth = mkOption {
         type = types.nullOr (types.either (types.enum [ false ]) oauthSubmodule);

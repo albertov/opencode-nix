@@ -16,26 +16,28 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-setup-idempotence";
 
-  nodes.machine = { pkgs, ... }: {
-    imports = [ ../module.nix ];
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ ../module.nix ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    services.opencode = {
-      enable = true;
-      defaults.directory = "/var/lib/opencode/default-directory";
-      instances.my-project = {
-        directory = "/srv/my-project";
-        listen.port = 8787;
-        preInitScript = "echo 'pre-init ran'";
-        postInitScript = "echo 'post-init ran'";
+      services.opencode = {
+        enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        instances.my-project = {
+          directory = "/srv/my-project";
+          listen.port = 8787;
+          preInitScript = "echo 'pre-init ran'";
+          postInitScript = "echo 'post-init ran'";
+        };
       };
-    };
 
-    system.activationScripts.testDirs = ''
-      mkdir -p /srv/my-project
-    '';
-  };
+      system.activationScripts.testDirs = ''
+        mkdir -p /srv/my-project
+      '';
+    };
 
   testScript = ''
     machine.wait_for_unit("opencode-my-project-setup.service")

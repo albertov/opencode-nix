@@ -17,32 +17,34 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-sandbox-isolation";
 
-  nodes.machine = { pkgs, ... }: {
-    imports = [ ../module.nix ];
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ ../module.nix ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    services.opencode = {
-      enable = true;
-      defaults.directory = "/var/lib/opencode/default-directory";
-      instances = {
-        instance-a = {
-          directory = "/srv/project-a";
-          stateDir = "/var/lib/opencode/state/a";
-          listen.port = 8787;
-        };
-        instance-b = {
-          directory = "/srv/project-b";
-          stateDir = "/var/lib/opencode/state/b";
-          listen.port = 9090;
+      services.opencode = {
+        enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        instances = {
+          instance-a = {
+            directory = "/srv/project-a";
+            stateDir = "/var/lib/opencode/state/a";
+            listen.port = 8787;
+          };
+          instance-b = {
+            directory = "/srv/project-b";
+            stateDir = "/var/lib/opencode/state/b";
+            listen.port = 9090;
+          };
         };
       };
-    };
 
-    system.activationScripts.testDirs = ''
-      mkdir -p /srv/project-a /srv/project-b
-    '';
-  };
+      system.activationScripts.testDirs = ''
+        mkdir -p /srv/project-a /srv/project-b
+      '';
+    };
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")

@@ -1,5 +1,5 @@
 # Code reviewer subagents: three parallel review instances
-{ ... }:
+_:
 
 let
   reviewerDescription = "Expert code review specialist. Proactively reviews code for quality, security, and maintainability";

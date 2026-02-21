@@ -1,5 +1,5 @@
 # Global permission baseline for the simple coding assistant example.
-{ ... }:
+_:
 
 {
   # Baseline policy: allow common tools globally, then tighten per-agent with

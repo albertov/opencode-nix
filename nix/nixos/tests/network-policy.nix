@@ -16,30 +16,32 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-network-policy";
   nodes = {
-    machine = { config, pkgs, ... }: {
-      imports = [ (import ../module.nix) ];
+    machine =
+      { pkgs, ... }:
+      {
+        imports = [ (import ../module.nix) ];
 
-      environment.systemPackages = [ pkgs.python3 ];
+        environment.systemPackages = [ pkgs.python3 ];
 
-      # nftables required for networkIsolation
-      networking.nftables.enable = true;
-      networking.firewall.enable = false;
-      users.users.opencode-isolated.uid = 975;
+        # nftables required for networkIsolation
+        networking.nftables.enable = true;
+        networking.firewall.enable = false;
+        users.users.opencode-isolated.uid = 975;
 
-      services.opencode = {
-        enable = true;
-        defaults.directory = "/var/lib/opencode/default-directory";
-        instances.isolated = {
-          directory = "/srv/isolated";
-          listen.port = 8787;
-          networkIsolation = {
-            enable = true;
-            outboundAllowCidrs = [ "10.0.0.0/8" ]; # internal only
+        services.opencode = {
+          enable = true;
+          defaults.directory = "/var/lib/opencode/default-directory";
+          instances.isolated = {
+            directory = "/srv/isolated";
+            listen.port = 8787;
+            networkIsolation = {
+              enable = true;
+              outboundAllowCidrs = [ "10.0.0.0/8" ]; # internal only
+            };
           };
         };
+        system.activationScripts.testDirs = "mkdir -p /srv/isolated";
       };
-      system.activationScripts.testDirs = "mkdir -p /srv/isolated";
-    };
   };
 
   testScript = ''

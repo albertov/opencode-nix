@@ -17,35 +17,37 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-multi-instance";
 
-  nodes.machine = { config, pkgs, ... }: {
-    imports = [ (import ../module.nix) ];
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ (import ../module.nix) ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    services.opencode = {
-      enable = true;
-      defaults.directory = "/var/lib/opencode/default-directory";
-      instances = {
-        project-a = {
-          directory = "/srv/project-a";
-          listen.address = "127.0.0.1";
-          listen.port = 8787;
-          environment.INSTANCE_ID = "project-a";
-        };
+      services.opencode = {
+        enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        instances = {
+          project-a = {
+            directory = "/srv/project-a";
+            listen.address = "127.0.0.1";
+            listen.port = 8787;
+            environment.INSTANCE_ID = "project-a";
+          };
 
-        project-b = {
-          directory = "/srv/project-b";
-          listen.address = "127.0.0.1";
-          listen.port = 9090;
-          environment.INSTANCE_ID = "project-b";
+          project-b = {
+            directory = "/srv/project-b";
+            listen.address = "127.0.0.1";
+            listen.port = 9090;
+            environment.INSTANCE_ID = "project-b";
+          };
         };
       };
-    };
 
-    system.activationScripts.testDirs = ''
-      mkdir -p /srv/project-a /srv/project-b
-    '';
-  };
+      system.activationScripts.testDirs = ''
+        mkdir -p /srv/project-a /srv/project-b
+      '';
+    };
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")

@@ -48,27 +48,34 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-simple-coding-assistant";
 
-  nodes.machine = { config, lib, pkgs, ... }: {
-    imports = [
-      (import ../module.nix)
-      (import ../../../examples/simple-coding-assistant { inherit config lib pkgs; })
-    ];
+  nodes.machine =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      imports = [
+        (import ../module.nix)
+        (import ../../../examples/simple-coding-assistant { inherit config lib pkgs; })
+      ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    # Required: the module gates all output on this flag
-    services.opencode.enable = true;
+      # Required: the module gates all output on this flag
+      services.opencode.enable = true;
 
-    services.opencode.instances.my-project = {
-      directory = "/srv/projects/my-project";
-      # No secrets file needed for a health-check test
-      environmentFile = lib.mkForce null;
+      services.opencode.instances.my-project = {
+        directory = "/srv/projects/my-project";
+        # No secrets file needed for a health-check test
+        environmentFile = lib.mkForce null;
+      };
+
+      system.activationScripts.testDirs = ''
+        mkdir -p /srv/projects/my-project
+      '';
     };
-
-    system.activationScripts.testDirs = ''
-      mkdir -p /srv/projects/my-project
-    '';
-  };
 
   testScript = ''
     machine.wait_for_unit("multi-user.target")

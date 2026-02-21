@@ -16,27 +16,29 @@ in
 pkgs.testers.nixosTest {
   name = "opencode-env-and-config";
 
-  nodes.machine = { pkgs, ... }: {
-    imports = [ ../module.nix ];
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ ../module.nix ];
 
-    environment.systemPackages = [ pkgs.python3 ];
+      environment.systemPackages = [ pkgs.python3 ];
 
-    environment.etc."test-opencode.env".text = "SECRET_VAR=supersecret\n";
+      environment.etc."test-opencode.env".text = "SECRET_VAR=supersecret\n";
 
-    services.opencode = {
-      enable = true;
-      defaults.directory = "/var/lib/opencode/default-directory";
-      instances.env-test = {
-        directory = "/srv/env-test";
-        listen.port = 8787;
-        environment.MY_VAR = "hello";
-        environmentFile = "/etc/test-opencode.env";
-        opencodeCfg = [ { opencode.theme = "dark"; } ];
+      services.opencode = {
+        enable = true;
+        defaults.directory = "/var/lib/opencode/default-directory";
+        instances.env-test = {
+          directory = "/srv/env-test";
+          listen.port = 8787;
+          environment.MY_VAR = "hello";
+          environmentFile = "/etc/test-opencode.env";
+          opencodeCfg = [ { opencode.theme = "dark"; } ];
+        };
       };
-    };
 
-    system.activationScripts.testDirs = "mkdir -p /srv/env-test";
-  };
+      system.activationScripts.testDirs = "mkdir -p /srv/env-test";
+    };
 
   testScript = ''
     machine.wait_for_unit("opencode-env-test-setup.service")

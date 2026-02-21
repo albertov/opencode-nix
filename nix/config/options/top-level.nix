@@ -18,7 +18,14 @@ in
       example = "catppuccin";
     };
     logLevel = mkOption {
-      type = types.nullOr (types.enum [ "DEBUG" "INFO" "WARN" "ERROR" ]);
+      type = types.nullOr (
+        types.enum [
+          "DEBUG"
+          "INFO"
+          "WARN"
+          "ERROR"
+        ]
+      );
       default = null;
       description = "Logging verbosity level. Must be uppercase: DEBUG, INFO, WARN, or ERROR.";
     };
@@ -50,7 +57,13 @@ in
       description = "When true, opencode creates a snapshot of files before editing them, enabling revert.";
     };
     share = mkOption {
-      type = types.nullOr (types.enum [ "manual" "auto" "disabled" ]);
+      type = types.nullOr (
+        types.enum [
+          "manual"
+          "auto"
+          "disabled"
+        ]
+      );
       default = null;
       description = ''
         Controls conversation session sharing. 'manual' lets users share on demand,
@@ -77,7 +90,10 @@ in
         File glob patterns for additional instruction files loaded at session start.
         Paths are relative to the project root.
       '';
-      example = [ "./CLAUDE.md" "./.opencode/*.md" ];
+      example = [
+        "./CLAUDE.md"
+        "./.opencode/*.md"
+      ];
     };
     plugin = mkOption {
       type = types.nullOr (types.listOf types.str);
@@ -89,7 +105,10 @@ in
       type = types.nullOr (types.listOf types.str);
       default = null;
       description = "List of provider IDs to disable. Disabled providers are hidden from model selection.";
-      example = [ "openai" "google" ];
+      example = [
+        "openai"
+        "google"
+      ];
     };
     enabled_providers = mkOption {
       type = types.nullOr (types.listOf types.str);

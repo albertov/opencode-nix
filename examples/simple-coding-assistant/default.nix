@@ -1,7 +1,7 @@
 # Simple Coding Assistant example.
 # This is a minimal NixOS service-module pattern; for a production-grade setup,
 # see examples/chief-coding-assistant.
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   services.opencode.instances.my-project = {
@@ -19,7 +19,10 @@
     environmentFile = "/run/secrets/opencode-my-project";
 
     # Add common coding-assistant CLI dependencies to PATH.
-    path = [ pkgs.git pkgs.ripgrep ];
+    path = [
+      pkgs.git
+      pkgs.ripgrep
+    ];
 
     # Compose opencode.json from focused modules.
     opencodeCfg = [

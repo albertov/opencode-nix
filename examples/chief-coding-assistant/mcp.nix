@@ -1,11 +1,14 @@
 # MCP server configuration: Tilth code navigation
-{ ... }:
+_:
 
 {
   opencode.mcp = {
     tilth = {
       type = "local";
-      command = [ "tilth" "--mcp" ];
+      command = [
+        "tilth"
+        "--mcp"
+      ];
       enabled = true;
       timeout = 30000;
     };

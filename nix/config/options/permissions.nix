@@ -4,7 +4,11 @@ let
   inherit (lib) mkOption types;
 
   # Matches upstream PermissionAction: the three allowed actions for a tool.
-  permissionAction = types.enum [ "allow" "ask" "deny" ];
+  permissionAction = types.enum [
+    "allow"
+    "ask"
+    "deny"
+  ];
 
   # Matches upstream PermissionRule = PermissionAction | PermissionObject.
   # A rule is either a simple action or a nested map (path/glob → action).
@@ -40,8 +44,12 @@ in
       "*" = "deny";
       bash = "allow";
       edit = "allow";
-      external_directory = { "/tmp/**" = "allow"; };
-      skill = { facturas-compras-holded = "allow"; };
+      external_directory = {
+        "/tmp/**" = "allow";
+      };
+      skill = {
+        facturas-compras-holded = "allow";
+      };
     };
   };
 }

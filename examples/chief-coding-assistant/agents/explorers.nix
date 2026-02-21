@@ -1,5 +1,5 @@
 # Codebase exploration and research subagents
-{ ... }:
+_:
 
 {
   opencode.agent = {

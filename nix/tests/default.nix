@@ -17,7 +17,11 @@
 # Nix store or binary cache it is fully reproducible.
 #
 
-{ pkgs, lib, opencode, mkOpenCodeConfig }:
+{
+  pkgs,
+  opencode,
+  mkOpenCodeConfig,
+}:
 
 let
   # Build node_modules using the upstream pattern (fixed-output derivation).
@@ -28,7 +32,7 @@ let
   # ── Test configs ──────────────────────────────────────────────────────
 
   # Test 1: Minimal (empty) config
-  minimalConfig = mkOpenCodeConfig [];
+  minimalConfig = mkOpenCodeConfig [ ];
 
   # Test 2: Theme config
   themeConfig = mkOpenCodeConfig [
@@ -50,7 +54,10 @@ let
     {
       opencode.mcp.my-tool = {
         type = "local";
-        command = [ "npx" "my-tool" ];
+        command = [
+          "npx"
+          "my-tool"
+        ];
       };
     }
   ];
@@ -117,7 +124,10 @@ let
       };
       opencode.mcp.my-tool = {
         type = "local";
-        command = [ "npx" "my-tool" ];
+        command = [
+          "npx"
+          "my-tool"
+        ];
       };
       opencode.permission = {
         bash = "allow";
@@ -150,14 +160,18 @@ let
   ];
 
   # Test 12: logLevel drift detection — raw lowercase "debug" should FAIL Zod.
-  logLevelDriftConfig = pkgs.writeText "opencode-loglevel-drift.json" (builtins.toJSON {
-    logLevel = "debug";
-  });
+  logLevelDriftConfig = pkgs.writeText "opencode-loglevel-drift.json" (
+    builtins.toJSON {
+      logLevel = "debug";
+    }
+  );
 
   # Test 13: Invalid config — unknown top-level key (schema is .strict())
-  invalidConfig = pkgs.writeText "opencode-invalid.json" (builtins.toJSON {
-    totally_bogus_field = true;
-  });
+  invalidConfig = pkgs.writeText "opencode-invalid.json" (
+    builtins.toJSON {
+      totally_bogus_field = true;
+    }
+  );
 
   # ── New test configs (14–24) ─────────────────────────────────────────
 
@@ -250,7 +264,10 @@ let
       opencode.model = "anthropic/claude-sonnet-4-5";
       opencode.share = "manual";
       opencode.autoupdate = "notify";
-      opencode.instructions = [ "./CLAUDE.md" "./.opencode/*.md" ];
+      opencode.instructions = [
+        "./CLAUDE.md"
+        "./.opencode/*.md"
+      ];
     }
     # Agent overrides
     {
@@ -270,7 +287,12 @@ let
     {
       opencode.mcp.filesystem = {
         type = "local";
-        command = [ "npx" "-y" "@modelcontextprotocol/server-filesystem" "/tmp" ];
+        command = [
+          "npx"
+          "-y"
+          "@modelcontextprotocol/server-filesystem"
+          "/tmp"
+        ];
       };
       opencode.mcp.github = {
         type = "remote";
@@ -280,11 +302,16 @@ let
     }
     # Permissions
     {
-      opencode.permission = { bash = "allow"; edit = "allow"; };
+      opencode.permission = {
+        bash = "allow";
+        edit = "allow";
+      };
     }
     # Disable noisy LSP
     {
-      opencode.lsp.yaml = { disabled = true; };
+      opencode.lsp.yaml = {
+        disabled = true;
+      };
     }
     # Keybinds
     {
@@ -319,8 +346,17 @@ let
           reasoning = false;
           tool_call = true;
           temperature = true;
-          limit = { context = 128000; output = 16384; };
-          modalities = { input = [ "text" "image" ]; output = [ "text" ]; };
+          limit = {
+            context = 128000;
+            output = 16384;
+          };
+          modalities = {
+            input = [
+              "text"
+              "image"
+            ];
+            output = [ "text" ];
+          };
         };
       };
     }
@@ -492,8 +528,17 @@ let
             reasoning = true;
             tool_call = true;
             temperature = true;
-            limit = { context = 200000; output = 64000; };
-            modalities = { input = [ "text" "image" ]; output = [ "text" ]; };
+            limit = {
+              context = 200000;
+              output = 64000;
+            };
+            modalities = {
+              input = [
+                "text"
+                "image"
+              ];
+              output = [ "text" ];
+            };
           };
         };
         # Standard providers
@@ -555,14 +600,17 @@ let
   # We use bun to strip comments and re-serialize as compact JSON.
   stripJsoncScript = ./strip-jsonc.js;
 
-  sampleReferenceJson = pkgs.runCommand "sample-reference.json" {
-    nativeBuildInputs = [ pkgs.bun ];
-    src = ../../opencode.sample.jsonc;
-  } ''
-    export HOME="$TMPDIR/home"
-    mkdir -p "$HOME"
-    bun ${stripJsoncScript} "$src" "$out"
-  '';
+  sampleReferenceJson =
+    pkgs.runCommand "sample-reference.json"
+      {
+        nativeBuildInputs = [ pkgs.bun ];
+        src = ../../opencode.sample.jsonc;
+      }
+      ''
+        export HOME="$TMPDIR/home"
+        mkdir -p "$HOME"
+        bun ${stripJsoncScript} "$src" "$out"
+      '';
 
   # Test 41: {file:path} template passthrough
   fileTemplateConfig = mkOpenCodeConfig [
@@ -600,9 +648,9 @@ let
 
   # Test 42: Invalid config Nix eval catches bad enum — Nix module type
   # checking rejects "bogus" at eval time, before Zod even runs.
-  invalidNixEvalSucceeded = (builtins.tryEval (
-    builtins.deepSeq (mkOpenCodeConfig [{ opencode.logLevel = "bogus"; }]) true
-  )).success;
+  invalidNixEvalSucceeded =
+    (builtins.tryEval (builtins.deepSeq (mkOpenCodeConfig [ { opencode.logLevel = "bogus"; } ]) true))
+    .success;
 
   # Script for deep structural comparison of two JSON files
   deepDiffScript = ./deep-diff.js;
@@ -622,22 +670,55 @@ pkgs.stdenvNoCC.mkDerivation {
 
   # Make all test configs available
   inherit
-    minimalConfig themeConfig agentConfig mcpConfig permissionConfig
-    tuiConfig serverConfig compactionConfig experimentalConfig
-    fullConfig logLevelConfig logLevelDriftConfig invalidConfig
-    mergedConfig listConcatConfig lspDisabledConfig formatterDisabledConfig
-    providerTimeoutFalseConfig autoupdateStringConfig autoupdateBoolConfig
-    envTemplateConfig remoteMcpConfig permissionWildcardConfig
-    emptyObjectConfig realisticConfig
-    providerNpmNameConfig providerModelsConfig providerExtraOptionsConfig
-    providerCacheKeyConfig permExternalDirConfig permSkillConfig
-    permMixedConfig agentNestedPermConfig agentPrimaryConfig
+    minimalConfig
+    themeConfig
+    agentConfig
+    mcpConfig
+    permissionConfig
+    tuiConfig
+    serverConfig
+    compactionConfig
+    experimentalConfig
+    fullConfig
+    logLevelConfig
+    logLevelDriftConfig
+    invalidConfig
+    mergedConfig
+    listConcatConfig
+    lspDisabledConfig
+    formatterDisabledConfig
+    providerTimeoutFalseConfig
+    autoupdateStringConfig
+    autoupdateBoolConfig
+    envTemplateConfig
+    remoteMcpConfig
+    permissionWildcardConfig
+    emptyObjectConfig
+    realisticConfig
+    providerNpmNameConfig
+    providerModelsConfig
+    providerExtraOptionsConfig
+    providerCacheKeyConfig
+    permExternalDirConfig
+    permSkillConfig
+    permMixedConfig
+    agentNestedPermConfig
+    agentPrimaryConfig
     agentPrimaryModeConfig
-    agentPrimaryFalseConfig agentModeOnlyConfig agentPrimaryFalseModeConfig
-    fullParityConfig parityJsonCheck
-    samplePortConfig sampleReferenceJson
-    fileTemplateConfig mcpOauthConfig mcpOauthDisabledConfig invalidNixEvalSucceeded
-    stripJsoncScript deepDiffScript;
+    agentPrimaryFalseConfig
+    agentModeOnlyConfig
+    agentPrimaryFalseModeConfig
+    fullParityConfig
+    parityJsonCheck
+    samplePortConfig
+    sampleReferenceJson
+    fileTemplateConfig
+    mcpOauthConfig
+    mcpOauthDisabledConfig
+    invalidNixEvalSucceeded
+    stripJsoncScript
+    deepDiffScript
+    ;
 
   buildPhase = ''
     runHook preBuild
