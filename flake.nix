@@ -132,6 +132,8 @@
             opencode = opencode.packages.x86_64-linux.default;
             inherit (pkgs.lib.opencode) mkOpenCodeConfig wrapOpenCode;
           };
+
+        simple-coding-assistant = import ./examples/simple-coding-assistant;
       };
     };
 }
