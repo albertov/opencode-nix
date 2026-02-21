@@ -43,6 +43,7 @@ examples/                          # importable example module configs
 ## Running checks
 
 ```bash
+nix fmt                                  # first format to avoid the formatting check failing
 nix flake check                          # all eval + VM tests on x86_64-linux
 nix build .#checks.x86_64-linux.<name>   # individual VM test derivation (requires KVM)
 nix run .#checks.x86_64-linux.<name>.driver   # run VM test driver directly
