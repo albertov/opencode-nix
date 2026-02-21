@@ -274,7 +274,7 @@ in
               WorkingDirectory = instance.directory;
 
               ExecStart = lib.escapeShellArgs (
-                [ "${instance.package}/bin/opencode" "serve" ]
+                [ "${instance.package}/bin/opencode" "serve" "--print-logs" ]
                 ++ [ "--port" (toString instance.listen.port) ]
                 ++ [ "--hostname" instance.listen.address ]
                 ++ lib.optionals (instance.logLevel != null) [ "--log-level" instance.logLevel ]
