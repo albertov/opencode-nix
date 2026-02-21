@@ -4,9 +4,9 @@ Library function that evaluates a list of Nix modules and produces a derivation 
 
 ## ADDED Requirements
 
-### Requirement: Function signature and return type
+### Requirement: Function signature and behavior
 
-`pkgs.lib.opencode.mkOpenCodeConfig` accepts a list of modules and returns a derivation. The implementation MUST evaluate against the overlay-selected package set and MUST NOT hardcode `x86_64-linux`.
+`pkgs.lib.opencode.mkOpenCodeConfig` SHALL accept a list of Nix modules and produce a derivation containing a valid `opencode.json` file. The function SHALL remain the canonical standalone entrypoint for generating opencode configuration from Nix modules. The function SHALL be system-aware, using `pkgs` to resolve any system-dependent values. The implementation MUST evaluate against the overlay-selected package set and MUST NOT hardcode `x86_64-linux`.
 
 #### Scenario: Overlay exposes helper namespace
 
@@ -18,6 +18,11 @@ Library function that evaluates a list of Nix modules and produces a derivation 
 - **WHEN** consumers use helper functions from this flake
 - **THEN** the supported entrypoint is `pkgs.lib.opencode.*` via overlayed nixpkgs
 - **AND** consumers are not required to use flake-level helper entrypoints.
+
+#### Scenario: Standalone config generation unchanged
+
+- **WHEN** `pkgs.lib.opencode.mkOpenCodeConfig [ { opencode.model = "sonnet"; } ]` is called
+- **THEN** the result SHALL be a derivation whose output is a valid JSON file containing `"model": "sonnet"`
 
 #### Scenario: Basic invocation
 
@@ -122,3 +127,40 @@ THEN Nix evaluation fails because the value is not in `["manual" "auto" "disable
 
 WHEN a module sets `{ nonExistentOption = true; }`
 THEN Nix evaluation fails with an "option does not exist" error (freeformType is NOT used at root).
+
+---
+
+### Requirement: Automatic schema URL injection
+
+Every generated `opencode.json` SHALL contain `"$schema": "https://opencode.ai/config.json"` as a top-level key. The `$schema` value is injected at the serialization layer after module evaluation and null-filtering — it is NOT a user-facing Nix option and MUST NOT appear in the option definitions.
+
+#### Scenario: Schema present in generated JSON
+
+- **WHEN** `pkgs.lib.opencode.mkOpenCodeConfig [ { opencode.model = "sonnet"; } ]` is built
+- **THEN** the output JSON contains `"$schema": "https://opencode.ai/config.json"` alongside `"model": "sonnet"`.
+
+#### Scenario: Schema present in empty config
+
+- **WHEN** `pkgs.lib.opencode.mkOpenCodeConfig [ ]` is built with no modules
+- **THEN** the output JSON is exactly `{"$schema":"https://opencode.ai/config.json"}`.
+
+#### Scenario: Schema is not a settable option
+
+- **WHEN** a module attempts `{ opencode."$schema" = "something"; }`
+- **THEN** Nix evaluation SHALL fail because `$schema` is not a declared option.
+
+---
+
+### Requirement: Reusable config evaluation for NixOS integration
+
+A companion function `pkgs.lib.opencode.mkOpenCodeConfigFromAttrs` SHALL accept an already-evaluated config attribute set (not a module list) and produce a derivation containing `opencode.json`. This function SHALL share the same null-filtering, schema-injection, and serialization pipeline as `mkOpenCodeConfig`, ensuring byte-identical output for equivalent inputs. This enables the NixOS service module to pass pre-merged config attributes without re-evaluating through the module system.
+
+#### Scenario: Companion function produces identical output
+
+- **WHEN** `mkOpenCodeConfigFromAttrs { model = "sonnet"; }` is built
+- **THEN** the output JSON is identical to `mkOpenCodeConfig [ { opencode.model = "sonnet"; } ]`.
+
+#### Scenario: Companion function applies null filtering and schema injection
+
+- **WHEN** `mkOpenCodeConfigFromAttrs { model = "sonnet"; theme = null; }` is built
+- **THEN** the output JSON contains `"model": "sonnet"` and `"$schema": "https://opencode.ai/config.json"` but not `"theme"`.

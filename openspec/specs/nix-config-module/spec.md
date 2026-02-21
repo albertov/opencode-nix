@@ -37,6 +37,12 @@ THEN the JSON contains those as JSON arrays of strings.
 WHEN a module does not set `theme`
 THEN the key `"theme"` is absent from the JSON output (not `null`, not empty string).
 
+#### Scenario: $schema is NOT a user-facing option
+
+- **WHEN** a module attempts to set `opencode."$schema" = "something"`
+- **THEN** Nix evaluation SHALL fail because `$schema` is not a declared option
+- **AND** schema injection is handled at the serialization layer, not via the option system.
+
 ---
 
 ### Requirement: Agent configuration
@@ -514,18 +520,29 @@ THEN evaluation fails with a Nix module system conflict error (not silent overri
 
 ### Requirement: NixOS service integration compatibility
 
-The typed config module MUST be consumable by the NixOS opencode service module through the existing opencode.json generation machinery for per-instance configuration generation.
+The typed config module MUST be consumable by the NixOS opencode service module through the existing opencode.json generation machinery for per-instance configuration generation. When used as a NixOS service submodule, the `opencode.` prefix SHALL be stripped so users write `config.model` (not `config.opencode.model`).
 
 #### Scenario: Instance configuration compiles to opencode config
 
-- **WHEN** a NixOS instance declares opencode configuration options through the typed module interface
-- **THEN** the service integration produces a valid opencode configuration artifact consumed by the instance runtime.
+- **WHEN** a NixOS instance declares opencode configuration options through the typed module interface (e.g., `config.model = "sonnet"`)
+- **THEN** the service integration produces a valid opencode configuration artifact consumed by the instance runtime
+- **AND** the generated JSON contains `"model": "sonnet"`.
+
+#### Scenario: Submodule strips opencode prefix
+
+- **WHEN** a NixOS instance sets `config.model = "sonnet"` (not `config.opencode.model`)
+- **THEN** evaluation succeeds and the generated JSON contains `"model": "sonnet"`.
 
 #### Scenario: Existing opencode.json pipeline is reused
 
 - **WHEN** the NixOS service module renders per-instance opencode configuration
-- **THEN** it uses the existing opencode.json generation path
+- **THEN** it uses the existing opencode.json generation path (via `mkOpenCodeConfigFromAttrs`)
 - **AND** does not introduce a second independent renderer with divergent behavior.
+
+#### Scenario: Standalone config generation still works
+
+- **WHEN** `mkOpenCodeConfig [ { opencode.model = "sonnet"; } ]` is called outside the NixOS service module
+- **THEN** it produces the same JSON output as when the same config is set via the NixOS service submodule.
 
 #### Scenario: Generated config is materialized at HOME config path
 
@@ -551,6 +568,12 @@ Configuration generation MUST be instance-scoped so one instance's config option
 - **WHEN** instance `a` sets `theme = "dark"` and instance `b` sets `theme = "catppuccin"`
 - **THEN** generated configs remain separate and each instance receives only its own value.
 
+#### Scenario: Independent instances have independent configs
+
+- **WHEN** instance `dev` sets `config.model = "sonnet"` and instance `prod` sets `config.model = "opus"`
+- **THEN** each instance's setup service references a separate generated JSON file
+- **AND** the `dev` JSON contains `"model": "sonnet"` while the `prod` JSON contains `"model": "opus"`.
+
 ### Requirement: Secret-safe integration with runtime environment injection
 
 Service integration MUST support secrets delivered through runtime environment files without requiring secret plaintext in generated static config.
@@ -560,3 +583,29 @@ Service integration MUST support secrets delivered through runtime environment f
 - **WHEN** API credentials are provided via NixOS `environmentFile`
 - **THEN** generated static opencode configuration does not embed those secret values and runtime resolves them from environment.
 
+#### Scenario: API key via env template and environmentFile
+
+- **WHEN** an instance sets `config.provider.anthropic.options.apiKey = "{env:ANTHROPIC_API_KEY}"` and `environmentFile = "/run/secrets/opencode"`
+- **THEN** the generated JSON contains the literal template string `{env:ANTHROPIC_API_KEY}`
+- **AND** the actual secret value is injected at runtime from the environment file, never appearing in the Nix store.
+
+---
+
+### Requirement: Automatic schema injection in generated JSON
+
+Every generated `opencode.json` SHALL contain `"$schema": "https://opencode.ai/config.json"` as a top-level key. The schema URL is injected at the serialization layer after module evaluation and null-filtering. It is NOT a user-facing Nix option and MUST NOT be overridable through the config submodule.
+
+#### Scenario: Schema present in all generated instance configs
+
+- **WHEN** an instance generates its config from the `config` submodule
+- **THEN** the generated JSON contains `"$schema": "https://opencode.ai/config.json"` regardless of what config values are set.
+
+#### Scenario: Schema present in empty config
+
+- **WHEN** an instance has no `config` values set (all defaults/nulls)
+- **THEN** the generated JSON is `{"$schema":"https://opencode.ai/config.json"}`.
+
+#### Scenario: Schema injection is not overridable
+
+- **WHEN** a user attempts to set `$schema` through the config submodule
+- **THEN** evaluation fails because `$schema` is not a declared option.
