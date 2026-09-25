@@ -3,7 +3,8 @@ _:
 
 let
   reviewerDescription = "Expert code review specialist. Proactively reviews code for quality, security, and maintainability";
-  reviewerPrompt = "{file:agents/code-reviewer.md}";
+  # FIXME: Create code-reviewer.md and use a proper path!
+  # reviewerPrompt = "{file:agents/code-reviewer.md}";
   reviewerPermission = {
     edit = "deny";
     question = "deny";
@@ -16,7 +17,7 @@ in
       description = reviewerDescription;
       mode = "subagent";
       model = "{env:OPENCODE_MODEL_REVIEW1}";
-      prompt = reviewerPrompt;
+      # prompt = reviewerPrompt;
       permission = reviewerPermission;
     };
 
@@ -24,7 +25,7 @@ in
       description = reviewerDescription;
       mode = "subagent";
       model = "{env:OPENCODE_MODEL_REVIEW2}";
-      prompt = reviewerPrompt;
+      # prompt = reviewerPrompt;
       permission = reviewerPermission;
     };
 
@@ -32,7 +33,7 @@ in
       description = reviewerDescription;
       mode = "subagent";
       model = "{env:OPENCODE_MODEL_REVIEW3}";
-      prompt = reviewerPrompt;
+      # prompt = reviewerPrompt;
       permission = reviewerPermission;
     };
   };

@@ -10,7 +10,8 @@ _:
       name = "Custom Provider";
       options = {
         baseURL = "https://api.example-provider.com/v1";
-        apiKey = "{file:secrets/api.key}";
+        # Use environment variable for secrets (not file paths, which don't work in Nix store)
+        apiKey = "{env:CUSTOM_OPENAI_API_KEY}";
       };
       # Per-model metadata: capabilities, token limits, and supported modalities.
       # Required for OpenAI-compatible providers that are not in the upstream registry.

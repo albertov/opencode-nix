@@ -47,6 +47,7 @@
         example-simple-coding-assistant = import ./examples/simple-coding-assistant;
       };
 
+      # nix flake check --no-warn-dirty
       checks = forAllSystems (
         pkgs:
         let
@@ -117,6 +118,24 @@
             };
 
             nixos-module-eval = import ./nix/nixos/tests/eval-tests.nix { inherit pkgs; };
+
+            # Test that example configurations build successfully
+            example-chief-coding-assistant-config = overlayPkgs.lib.opencode.mkOpenCodeConfig [
+              self.nixosModules.example-chief-coding-assistant
+            ];
+
+            # Verify chief-coding-assistant has no {file: references
+            example-chief-no-file-refs = pkgs.runCommand "chief-no-file-refs-test" { } ''
+              config=${overlayPkgs.lib.opencode.mkOpenCodeConfig [ self.nixosModules.example-chief-coding-assistant ]}
+              if grep -q '{file:' "$config"; then
+                echo "FAIL: Found {file: references in chief-coding-assistant config"
+                grep '{file:' "$config"
+                exit 1
+              else
+                echo "PASS: No {file: references found"
+                touch $out
+              fi
+            '';
           };
         in
         baseChecks
