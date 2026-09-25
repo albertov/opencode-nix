@@ -56,6 +56,7 @@ let
     let
       evaluated = lib.evalModules {
         modules = [ moduleSystem ] ++ modules;
+        specialArgs = { inherit pkgs; };
       };
       normalized = normalizeConfig evaluated.config.opencode;
       cleaned = cleanConfig normalized;

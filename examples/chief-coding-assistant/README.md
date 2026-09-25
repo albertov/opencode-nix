@@ -10,7 +10,7 @@ Features:
 - **Multiple AI providers**: Modal AI, Ollama (local), Amazon Bedrock
 - **Primary agents**: `chief` (orchestrator), `bird` (drinking-bird loop), `plan` (planning), `invoicer` (invoice processing)
 - **Subagent roster**: Language experts (Rust, Haskell, Python, Nix, CUDA, ReScript), code reviewers, codebase explorers
-- **Tilth MCP** for fast code navigation
+- **Tilth MCP** for fast code navigation (automatically provided via Nix flake)
 
 ## Required Environment Variables
 
@@ -25,6 +25,46 @@ Features:
 | `OPENCODE_MODEL_IMPLEMENTER_SMALL` | Fast implementers (Rust, Haskell, Python) |
 | `OPENCODE_MODEL_REVIEW1/2/3` | Three parallel code reviewer instances |
 | `OPENCODE_MODEL_WEB` | Web search agent |
+
+## Tilth MCP Installation
+
+This configuration uses the [Tilth](https://github.com/jahala/tilth) MCP server for fast, tree-sitter-powered code navigation. Tilth is automatically provided through the Nix flake's overlay.
+
+### For NixOS Services
+
+When deploying as a NixOS service, tilth is automatically available via the overlay. See `service.nix` for a complete example:
+
+```nix
+{
+  services.opencode.instances.chief-assistant = {
+    directory = "/srv/projects/my-project";
+    
+    # tilth is provided by pkgs.tilth from the overlay
+    path = [ pkgs.tilth pkgs.git pkgs.ripgrep ];
+    
+    configFile = pkgs.lib.opencode.mkOpenCodeConfig [
+      ocnix.nixosModules.example-chief-coding-assistant
+    ];
+  };
+}
+```
+
+### For Standalone Use
+
+For standalone use (outside NixOS services), install tilth via:
+
+```bash
+# Via cargo
+cargo install tilth
+
+# Via npm/npx
+npx tilth
+
+# Via Nix profile
+nix profile install github:jahala/tilth
+
+# Or ensure the ocnix overlay is applied and tilth will be in your pkgs
+```
 
 ## Usage
 

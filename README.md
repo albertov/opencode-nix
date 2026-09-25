@@ -19,7 +19,9 @@ The `examples/` directory contains importable NixOS modules you can use directly
 | Example | Use Case | What It Shows |
 |---------|----------|---------------|
 | [`simple-coding-assistant`](examples/simple-coding-assistant/) | Single project assistant | Minimal NixOS service instance with 4 subagents, runtime-loaded skills, and `mkOpenCodeConfig` module composition |
-| [`chief-coding-assistant`](examples/chief-coding-assistant/) | Multi-provider agent farm | Deny-by-default permissions, 3 AI providers, 15+ agents (orchestrator, language experts, reviewers, explorers), MCP tooling, and environment-variable-driven model selection |
+| [`chief-coding-assistant`](examples/chief-coding-assistant/) | Multi-provider agent farm | Deny-by-default permissions, 3 AI providers, 15+ agents (orchestrator, language experts, reviewers, explorers), **Tilth MCP** for code navigation, and environment-variable-driven model selection |
+
+**Note**: The `chief-coding-assistant` example uses [Tilth](https://github.com/jahala/tilth) for fast code navigation. Tilth is automatically provided via the flake's overlay as `pkgs.tilth`. See [`TILTH_INTEGRATION.md`](TILTH_INTEGRATION.md) for details.
 
 Both examples can be imported directly into a NixOS configuration:
 

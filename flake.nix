@@ -5,6 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     opencode.url = "github:anomalyco/opencode";
     opencode.inputs.nixpkgs.follows = "nixpkgs";
+    tilth.url = "github:jahala/tilth";
+    tilth.inputs.nixpkgs.follows = "nixpkgs";
     systems.url = "github:nix-systems/default";
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
@@ -17,6 +19,7 @@
       self,
       nixpkgs,
       opencode,
+      tilth,
       systems,
       treefmt-nix,
     }:
@@ -38,6 +41,7 @@
           opencode = mkLib final;
         };
         opencode = opencode.packages.${final.system}.default;
+        tilth = tilth.packages.${final.system}.default;
       };
 
       nixosModules = {

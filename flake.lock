@@ -41,6 +41,7 @@
         "nixpkgs": "nixpkgs",
         "opencode": "opencode",
         "systems": "systems",
+        "tilth": "tilth",
         "treefmt-nix": "treefmt-nix"
       }
     },
@@ -56,6 +57,26 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "tilth": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1773234780,
+        "narHash": "sha256-MR9u3+FROzZgyuPS1OK+jzxAfpodzxD6qJ6CFUw/JuQ=",
+        "owner": "jahala",
+        "repo": "tilth",
+        "rev": "31a3e982536dcdd4055ecb0285be8d89473fd74f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jahala",
+        "repo": "tilth",
         "type": "github"
       }
     },
